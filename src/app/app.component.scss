@@ -1,0 +1,6 @@
+@import "./theme-vars.scss";
+
+.link-active {
+  background-color: mat-color($app-primary, 50);
+  color: mat-contrast($app-primary, 50);
+}
