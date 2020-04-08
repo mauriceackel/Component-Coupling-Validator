@@ -239,7 +239,7 @@ export class MappingService {
    */
   private stringifyedToJsonata(obj: string) {
     const keyValueRegex = /(?:\"|\')([^"]*)(?:\"|\')(?=:)(?:\:\s*)(?:\"|\')?(true|false|[^"]*)(?:"(?=\s*(,|})))/g;
-    return obj.replace(keyValueRegex, '"$1":$1');
+    return obj.replace(keyValueRegex, '"$1":$2');
   }
 }
 
