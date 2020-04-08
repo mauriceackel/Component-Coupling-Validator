@@ -36,7 +36,7 @@ export class JsonEditorComponent implements AfterViewInit, OnChanges {
   public ngOnChanges(changes: SimpleChanges) {
     if(changes.data?.currentValue === undefined) {
       this.jsonEditor.set({});
-    } else if (JSON.stringify(changes.data.currentValue) !== JSON.stringify(this.jsonEditor.get())) {
+    } else if (changes.data?.currentValue && JSON.stringify(changes.data.currentValue) !== JSON.stringify(this.jsonEditor.get())) {
       this.jsonEditor.set(changes.data.currentValue);
     }
     this.hasChanges = false;
