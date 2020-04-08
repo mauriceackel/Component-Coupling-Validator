@@ -238,8 +238,8 @@ export class MappingService {
    * { "foo":"bar" } --> { "foo":bar }
    */
   private stringifyedToJsonata(obj: string) {
-    const keyValueRegex = /(?:\"|\')(?<key>[^"]*)(?:\"|\')(?=:)(?:\:\s*)(?:\"|\')?(?<value>true|false|[0-9a-zA-Z\+\-\,\.\$]*)(?:"(?=\s*(,|})))/g;
-    return obj.replace(keyValueRegex, '"$<key>":$<value>');
+    const keyValueRegex = /(?:\"|\')([^"]*)(?:\"|\')(?=:)(?:\:\s*)(?:\"|\')?(true|false|[^"]*)(?:"(?=\s*(,|})))/g;
+    return obj.replace(keyValueRegex, '"$1":$1');
   }
 }
 

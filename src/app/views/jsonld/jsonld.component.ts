@@ -57,9 +57,9 @@ export class JsonldComponent implements OnInit {
     }
   }
 
-  public save(jsonLd: any, iface: IInterface, ref: { jsonLd: any }) {
+  public save(jsonLdContext: any, iface: IInterface, ref: { jsonLdContext: any }) {
     if (iface) {
-      ref.jsonLd = jsonLd;
+      ref.jsonLdContext = jsonLdContext;
       this.interfaceService.updateInterface(iface);
     }
     this.initializeMapping();

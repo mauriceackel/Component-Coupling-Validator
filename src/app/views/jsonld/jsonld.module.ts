@@ -9,6 +9,7 @@ import { JsonldComponent } from './jsonld.component';
 import { MappingZoneModule } from '~/app/components/mapping-zone/mapping-zone.module';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { EditorZoneModule } from '~/app/components/editor-zone/editor-zone.module';
 import { JoinPipeModule } from '~/app/utils/join.pipe';
@@ -24,6 +25,7 @@ import { JoinPipeModule } from '~/app/utils/join.pipe';
     MatCardModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
     MappingZoneModule,
     MatSelectModule,
     MatTabsModule,

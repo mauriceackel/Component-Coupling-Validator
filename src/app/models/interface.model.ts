@@ -4,11 +4,11 @@ export interface IInterface {
   endpoint: string
   request: {
     body: any,
-    jsonLd: any
+    jsonLdContext: any
   }
   response: {
     body: any,
-    jsonLd: any
+    jsonLdContext: any
   }
 }
 

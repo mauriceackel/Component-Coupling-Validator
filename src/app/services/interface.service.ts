@@ -33,11 +33,11 @@ export class InterfaceService {
       endpoint: iface.endpoint,
       request: {
         body: iface.request.body && JSON.parse(iface.request.body),
-        jsonLd: iface.request.jsonLd && JSON.parse(iface.request.jsonLd)
+        jsonLdContext: iface.request.jsonLdContext && JSON.parse(iface.request.jsonLdContext)
       },
       response: {
         body: iface.response.body && JSON.parse(iface.response.body),
-        jsonLd: iface.response.jsonLd && JSON.parse(iface.response.jsonLd)
+        jsonLdContext: iface.response.jsonLdContext && JSON.parse(iface.response.jsonLdContext)
       }
     }
   }
@@ -48,11 +48,11 @@ export class InterfaceService {
       createdBy: iface.createdBy,
       request: {
         body: iface.request.body && JSON.stringify(iface.request.body),
-        jsonLd: iface.request.jsonLd && JSON.stringify(iface.request.jsonLd)
+        jsonLdContext: iface.request.jsonLdContext && JSON.stringify(iface.request.jsonLdContext)
       },
       response: {
         body: iface.response.body && JSON.stringify(iface.response.body),
-        jsonLd: iface.response.jsonLd && JSON.stringify(iface.response.jsonLd)
+        jsonLdContext: iface.response.jsonLdContext && JSON.stringify(iface.response.jsonLdContext)
       }
     }
   }

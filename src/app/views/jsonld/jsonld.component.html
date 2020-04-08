@@ -31,15 +31,18 @@
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     <b>JsonLD Editor</b>
+                    <mat-icon class="mx-2" matTooltip="Only enter the JsonLd context without the enclosing @context">
+                      info
+                    </mat-icon>
                   </mat-panel-title>
                   <mat-panel-description>
-                    Edit JsonLD here
+                    Edit JsonLD context here
                   </mat-panel-description>
                 </mat-expansion-panel-header>
 
                 <div class="pt-2">
-                  <app-editor-zone leftHeading="Source Request Body" rightHeading="Target Request Body"
-                    [leftData]="mappingSource.value?.request.jsonLd" [rightData]="mappingTarget.value?.request.jsonLd"
+                  <app-editor-zone leftHeading="Source Request Context" rightHeading="Target Request Context"
+                    [leftData]="mappingSource.value?.request.jsonLdContext" [rightData]="mappingTarget.value?.request.jsonLdContext"
                     (saveLeft)="save($event, mappingSource.value, mappingSource.value?.request)" (saveRight)="save($event, mappingTarget.value, mappingTarget.value?.request)">
                   </app-editor-zone>
                 </div>
@@ -71,15 +74,18 @@
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     <b>JsonLD Editor</b>
+                    <mat-icon class="mx-2" matTooltip="Only enter the JsonLd context without the enclosing @context">
+                      info
+                    </mat-icon>
                   </mat-panel-title>
                   <mat-panel-description>
-                    Edit JsonLD here
+                    Edit JsonLD context here
                   </mat-panel-description>
                 </mat-expansion-panel-header>
 
                 <div class="pt-2">
-                  <app-editor-zone leftHeading="Source Response Body" rightHeading="Target Response Body"
-                    [leftData]="mappingSource.value?.response.jsonLd" [rightData]="mappingTarget.value?.response.jsonLd"
+                  <app-editor-zone leftHeading="Source Response Context" rightHeading="Target Response Context"
+                    [leftData]="mappingSource.value?.response.jsonLdContext" [rightData]="mappingTarget.value?.response.jsonLdContext"
                     (saveLeft)="save($event, mappingSource.value, mappingSource.value?.response)" (saveRight)="save($event, mappingTarget.value, mappingTarget.value?.response)">
                   </app-editor-zone>
                 </div>
