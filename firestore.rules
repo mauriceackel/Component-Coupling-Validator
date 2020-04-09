@@ -12,7 +12,7 @@ service cloud.firestore {
 
     match /interfaces/{interfaceId} {
       // Everyone can read the interface descriptions
-      allow get, list: if isAuthenticated();
+      allow get, list: if isAuthenticated()
       allow update: if isAuthenticated() && (
       							  isAdmin() ||
       							  request.resource.data.endpoint == resource.data.endpoint &&
@@ -23,10 +23,23 @@ service cloud.firestore {
     }
 
     match /mappings/{mappingId} {
-      // Everyone can read the interface descriptions
-      allow get, list: if isAuthenticated();
+      // Everyone can read the mapping descriptions
+      allow get, list: if isAuthenticated()
       allow create: if isAdmin() || request.auth.uid == request.resource.data.createdBy
       allow update, delete: if isAdmin() || request.auth.uid == resource.data.createdBy
+    }
+
+    match /tasks/{taskId} {
+      // Everyone can read the tasks
+      allow get, list: if isAuthenticated()
+      allow create: if isAdmin()
+      allow update, delete: if isAdmin()
+    }
+
+    match /task-reports/{reportId} {
+      // Everyone can read the interface descriptions
+      allow get, list, update, delete: if isAdmin()
+      allow create: if isAdmin() || request.auth.uid == request.resource.data.createdBy
     }
   }
 }
