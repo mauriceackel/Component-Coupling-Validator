@@ -12,7 +12,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { EditorZoneModule } from '~/app/components/editor-zone/editor-zone.module';
-import { JoinPipeModule } from '~/app/utils/join.pipe';
+import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
 
 @NgModule({
   declarations: [

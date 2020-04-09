@@ -1,4 +1,4 @@
-import { KeyChain } from '../services/jsontree.service';
+import { KeyChain } from '../../services/jsontree.service';
 
 export class ValidationError extends Error {
 

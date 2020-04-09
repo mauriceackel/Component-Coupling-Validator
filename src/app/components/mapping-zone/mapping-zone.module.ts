@@ -5,7 +5,7 @@ import { MatTreeModule } from '@angular/material/tree';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MappingZoneComponent } from './mapping-zone.component';
-import { JoinPipeModule } from '~/app/utils/join.pipe';
+import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
 
 @NgModule({
   declarations: [

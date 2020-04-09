@@ -1,33 +1,35 @@
 import { Injectable } from "@angular/core";
-import { HttpClient } from '@angular/common/http';
 import { IMapping, IMappingPair, MappingType } from '../models/mapping.model';
-import { mappingEndpoint } from '~/app/app.config';
 import { IInterface } from '../models/interface.model';
 import * as merge from 'deepmerge';
 import * as jsonata from 'jsonata';
 import { KeyChain } from './jsontree.service';
-import { IdentificationService } from './identification.service';
+import { AuthenticationService } from './authentication.service';
+import { AngularFirestore } from '@angular/fire/firestore';
+import { AngularFirestoreCollection } from '@angular/fire/firestore/public_api';
+import { removeUndefined } from '../utils/remove-undefined';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MappingService {
 
-  constructor(private identificationService: IdentificationService, private httpClient: HttpClient) { }
+  private mappingColl: AngularFirestoreCollection<IMapping>;
+
+  constructor(private identificationService: AuthenticationService, private firestore: AngularFirestore) {
+    this.mappingColl = firestore.collection('mappings');
+  }
 
   /**
    * Get all mappings from the database
    * @param conditions A set of conditions that are applied when getting the results
    */
-  public async getMappings(conditions?: { [key: string]: any }): Promise<Array<IMapping>> {
-    const filter = conditions && "?" + Object.entries(conditions).map(e => {
-      const filterObject = {};
-      filterObject[e[0]] = e[1];
-      return "filter=" + JSON.stringify(filterObject);
-    }).join("&");
-    const endpoint = mappingEndpoint + (filter || '');
-    const rawResult = await this.httpClient.get<Array<IMapping>>(endpoint).toPromise();
-    return rawResult.map(mapping => this.parseMapping(mapping));
+  public async getMappings(conditions: { [key: string]: any } = {}): Promise<Array<IMapping>> {
+    const rawMappings = (await this.mappingColl.get().toPromise()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const mappings = rawMappings.map(mapping => this.parseMapping(mapping));
+    const filteredMappings = mappings.filter(mapping => Object.entries(conditions).every(e => mapping[e[0]] === e[1]));
+
+    return filteredMappings;
   }
 
   /**
@@ -35,8 +37,8 @@ export class MappingService {
    * @param id The id of the mapping that schould be retrieved
    */
   public async getMapping(id: string): Promise<IMapping> {
-    const rawResult = await this.httpClient.get<IMapping>(`${mappingEndpoint}/${id}`).toPromise();
-    return this.parseMapping(rawResult);
+    const doc = await this.mappingColl.doc<IMapping>(id).get().toPromise();
+    return this.parseMapping({ id: doc.id, ...doc.data() });
   }
 
   /**
@@ -44,30 +46,35 @@ export class MappingService {
    * @param mapping
    */
   public async createMapping(mapping: IMapping) {
-    return this.httpClient.post(mappingEndpoint, mapping).toPromise();
+    const id = this.firestore.createId();
+    const elem: IMapping = {
+      ...this.serializeMapping(mapping),
+      id
+    };
+    return this.mappingColl.doc(id).set(elem);
+  }
+
+  /**
+   * Updates a mapping in the database
+   * @param mapping
+   */
+  public async updateMapping(mapping: IMapping) {
+    return this.mappingColl.doc(mapping.id).update(this.serializeMapping(mapping));
   }
 
   private parseMapping(mapping: any): IMapping {
     return {
-      id: mapping._id["$oid"] || mapping._id,
-      createdBy: mapping.createdBy,
-      type: mapping.type,
-      sourceId: mapping.sourceId,
-      targetId: mapping.targetId,
-      requestMapping: mapping.requestMapping,
-      responseMapping: mapping.responseMapping
+      ...mapping,
     }
   }
 
   private serializeMapping(mapping: IMapping) {
-    return {
-      createdBy: mapping.createdBy,
-      type: mapping.type,
-      sourceId: mapping.sourceId,
-      targetId: mapping.targetId,
-      requestMapping: mapping.requestMapping,
-      responseMapping: mapping.responseMapping
+    let result = {
+      ...mapping,
+      id: undefined
     }
+    result = removeUndefined(result);
+    return result;
   }
 
   /**
@@ -131,7 +138,7 @@ export class MappingService {
 
     return {
       id: undefined,
-      createdBy: this.identificationService.UserName,
+      createdBy: this.identificationService.User.uid,
       type: type,
       sourceId: source.id,
       targetId: target.id,
@@ -146,20 +153,27 @@ export class MappingService {
    */
   private mappingPairsToTrans(mappingPairs: Array<IMappingPair>, direction: MappingDirection) {
     return merge.all(mappingPairs.map(p => {
-      let toBeMapped: KeyChain;
+      let required: KeyChain;
+      let provided: KeyChain;
       switch (direction) {
-        //If we are mapping an input, we need to map values from the source to the target, hence we use target as reference
-        case MappingDirection.INPUT: toBeMapped = p.target; break;
-        //If we are mapping an output, we need to map values from the target to the source, hence we use source as reference
-        case MappingDirection.OUTPUT: toBeMapped = p.source; break;
+        //If we are mapping an input, we need to map values from the source to the target, hence we use target as required
+        case MappingDirection.INPUT: {
+          required = p.target;
+          provided = p.source;
+        }; break;
+        //If we are mapping an output, we need to map values from the target to the source, hence we use source as required
+        case MappingDirection.OUTPUT: {
+          required = p.source;
+          provided = p.target;
+        }; break;
         default: throw new Error("Unknown mapping direction");
       }
 
-      return toBeMapped.reduceRight((child: any, curr: string) => {
+      return required.reduceRight((child: any, curr: string) => {
         let obj: any = {};
         obj[curr] = child;
         return obj;
-      }, p.target.join('.'));
+      }, provided.join('.'));
     }));
   }
 
@@ -176,8 +190,8 @@ export class MappingService {
     const resultingMapping = this.executeMappingChain(mappingChain);
 
     return {
-      request: this.transToMappingPairs(JSON.parse(resultingMapping.requestMapping)),
-      response: this.transToMappingPairs(JSON.parse(resultingMapping.responseMapping))
+      request: this.transToMappingPairs(JSON.parse(resultingMapping.requestMapping), MappingDirection.INPUT),
+      response: this.transToMappingPairs(JSON.parse(resultingMapping.responseMapping), MappingDirection.OUTPUT)
     }
   }
 
@@ -185,17 +199,32 @@ export class MappingService {
    * Creates an array of mapping pairs from an jsonata input
    * @param transformation The JSONata transformation as object
    */
-  private transToMappingPairs(transformation: any, keyChain: Array<string> = []): Array<IMappingPair> {
+  private transToMappingPairs(transformation: any, direction: MappingDirection, keyChain: Array<string> = []): Array<IMappingPair> {
     const result = new Array<IMappingPair>();
 
     for (const key in transformation) {
       if (typeof transformation[key] === "object" && !(transformation[key] instanceof Array)) {
-        result.push(...this.transToMappingPairs(transformation[key], [...keyChain, key]));
+        result.push(...this.transToMappingPairs(transformation[key], direction, [...keyChain, key]));
       } else {
-        result.push({
-          source: [...keyChain, key],
-          target: transformation[key].split('.')
-        });
+        let pair: IMappingPair;
+        switch (direction) {
+          //If we are mapping an input, we need to map values from the source to the target, hence the values are the keys of the source
+          case MappingDirection.INPUT: {
+            pair = {
+              source: transformation[key].split('.'),
+              target: [...keyChain, key],
+            }
+          }; break;
+          //If we are mapping an output, we need to map values from the target to the source, hence the values are the key of the target
+          case MappingDirection.OUTPUT: {
+            pair = {
+              source: [...keyChain, key],
+              target: transformation[key].split('.'),
+            }
+          }; break;
+          default: throw new Error("Unknown mapping direction");
+        }
+        result.push(pair);
       }
     }
 

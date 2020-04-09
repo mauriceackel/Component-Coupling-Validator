@@ -6,7 +6,7 @@ import { merge } from 'rxjs';
 import { MappingService } from '~/app/services/mapping.service';
 import { MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { GenericDialog, ButtonType } from '~/app/utils/generic-dialog/generic-dialog.component';
-import { ValidationError } from '~/app/utils/validation-error';
+import { ValidationError } from '~/app/utils/errors/validation-error';
 import { IMappingPair, MappingType } from '~/app/models/mapping.model';
 import { ValidationService } from '~/app/services/validation.service';
 import { Router } from '@angular/router';

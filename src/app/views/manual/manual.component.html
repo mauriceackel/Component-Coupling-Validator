@@ -25,7 +25,7 @@
     <div class="col">
       <mat-tab-group mat-stretch-tabs>
         <mat-tab label="Request">
-          <div class="py-4">
+          <div class="p-4">
             <app-mapping-zone leftHeading="Source Request Body" rightHeading="Target Request Body"
               [leftData]="mappingSource.value?.request.body" [rightData]="mappingTarget.value?.request.body"
               [mappingPairs]="requestMappingPairs">
@@ -33,7 +33,7 @@
           </div>
         </mat-tab>
         <mat-tab label="Response">
-          <div class="py-4">
+          <div class="p-4">
             <app-mapping-zone leftHeading="Source Response Body" rightHeading="Target Response Body"
               [leftData]="mappingSource.value?.response.body" [rightData]="mappingTarget.value?.response.body"
               [mappingPairs]="responseMappingPairs">

@@ -1,36 +1,35 @@
 import { Injectable } from "@angular/core";
-import { HttpClient } from '@angular/common/http';
+import { AngularFirestore, AngularFirestoreCollection } from '@angular/fire/firestore';
 import { IInterface } from '../models/interface.model';
-import { interfaceEndpoint } from '~/app/app.config';
+import { removeUndefined } from '../utils/remove-undefined';
 
 @Injectable({
   providedIn: 'root'
 })
 export class InterfaceService {
 
-  constructor(private httpClient: HttpClient) { }
+  private interfaceColl: AngularFirestoreCollection<IInterface>;
 
-  public async getInterfaces(conditions?: { [key: string]: string }) : Promise<Array<IInterface>>{
-    const filter = conditions && "?" + Object.entries(conditions).map(e => {
-      const filterObject = {};
-      filterObject[e[0]] = e[1];
-      return "filter=" + JSON.stringify(filterObject);
-    }).join("&");
-    const endpoint = interfaceEndpoint + (filter || '');
-    const rawResult = await this.httpClient.get<Array<any>>(endpoint).toPromise();
-    return rawResult.map(iface => this.parseInterface(iface));
+  constructor(private firestore: AngularFirestore) {
+    this.interfaceColl = firestore.collection('interfaces');
   }
 
-  public async getInterface(id: string) : Promise<IInterface> {
-    const rawResult = await this.httpClient.get<any>(`${interfaceEndpoint}/${id}`).toPromise();
-    return this.parseInterface(rawResult);
+  public async getInterfaces(conditions: { [key: string]: string } = {}): Promise<Array<IInterface>> {
+    const rawInterfaces = (await this.interfaceColl.get().toPromise()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const interfaces = rawInterfaces.map(iface => this.parseInterface(iface));
+    const filteredInterfaces = interfaces.filter(iface => Object.entries(conditions).every(e => iface[e[0]] === e[1]));
+
+    return filteredInterfaces;
+  }
+
+  public async getInterface(id: string): Promise<IInterface> {
+    const doc = await this.interfaceColl.doc<IInterface>(id).get().toPromise();
+    return this.parseInterface({ id: doc.id, ...doc.data() });
   }
 
   private parseInterface(iface: any): IInterface {
     return {
-      id: iface._id["$oid"] || iface._id,
-      createdBy: iface.createdBy,
-      endpoint: iface.endpoint,
+      ...iface,
       request: {
         body: iface.request.body && JSON.parse(iface.request.body),
         jsonLdContext: iface.request.jsonLdContext && JSON.parse(iface.request.jsonLdContext)
@@ -43,9 +42,9 @@ export class InterfaceService {
   }
 
   private serializeInterface(iface: IInterface) {
-    return {
-      endpoint: iface.endpoint,
-      createdBy: iface.createdBy,
+    let result = {
+      ...iface,
+      id: undefined,
       request: {
         body: iface.request.body && JSON.stringify(iface.request.body),
         jsonLdContext: iface.request.jsonLdContext && JSON.stringify(iface.request.jsonLdContext)
@@ -55,14 +54,21 @@ export class InterfaceService {
         jsonLdContext: iface.response.jsonLdContext && JSON.stringify(iface.response.jsonLdContext)
       }
     }
+    result = removeUndefined(result);
+    return result;
   }
 
   public async createInterface(iface: IInterface) {
-    return this.httpClient.post(interfaceEndpoint, iface).toPromise();
+    const id = this.firestore.createId();
+    const elem: IInterface = {
+      ...this.serializeInterface(iface),
+      id
+    };
+    return this.interfaceColl.doc(id).set(elem);
   }
 
   public async updateInterface(iface: IInterface) {
-    return this.httpClient.patch(`${interfaceEndpoint}/${iface.id}`, this.serializeInterface(iface)).toPromise();
+    return this.interfaceColl.doc(iface.id).update(this.serializeInterface(iface));
   }
 
 }

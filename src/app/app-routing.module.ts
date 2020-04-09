@@ -1,36 +1,35 @@
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
-import { IdentificationComponent } from './views/identification/identification.component';
-import { IdentificationService } from './services/identification.service';
+import { LoginComponent } from './views/login/login.component';
+import { AuthenticationService, AuthGuard } from './services/authentication.service';
 import { HomeComponent } from './views/home/home.component';
 import { ManualComponent } from './views/manual/manual.component';
 import { TransformationComponent } from './views/transformation/transformation.component';
 import { JsonldComponent } from './views/jsonld/jsonld.component';
 
-
 const routes: Routes = [
   {
-    path: 'identification',
-    component: IdentificationComponent,
+    path: 'login',
+    component: LoginComponent,
   },
   {
     path: 'manual',
-    canActivate: [IdentificationService],
+    canActivate: [AuthGuard],
     component: ManualComponent,
   },
   {
     path: 'transformation',
-    canActivate: [IdentificationService],
+    canActivate: [AuthGuard],
     component: TransformationComponent,
   },
   {
     path: 'jsonld',
-    canActivate: [IdentificationService],
+    canActivate: [AuthGuard],
     component: JsonldComponent,
   },
   {
     path: 'home',
-    canActivate: [IdentificationService],
+    canActivate: [AuthGuard],
     component: HomeComponent,
   },
   {

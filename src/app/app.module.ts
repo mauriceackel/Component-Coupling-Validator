@@ -10,11 +10,14 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 
 import { HomeModule } from './views/home/home.module';
-import { IdentificationModule } from './views/identification/identification.module';
+import { LoginModule } from './views/login/login.module';
 import { ManualModule } from './views/manual/manual.module';
 import { TransformationModule } from './views/transformation/transformation.module';
 import { JsonldModule } from './views/jsonld/jsonld.module';
-import { AuthInterceptor } from './services/authinterceptor.service';
+import { AngularFireModule } from '@angular/fire';
+import { environment } from '../environments/environment';
+import { AuthenticationService, AuthGuard } from './services/authentication.service';
+import { MatIconModule } from '@angular/material/icon';
 
 @NgModule({
   declarations: [
@@ -22,24 +25,23 @@ import { AuthInterceptor } from './services/authinterceptor.service';
   ],
   imports: [
     CommonModule,
+    AngularFireModule.initializeApp(environment.firebase),
     HttpClientModule,
     BrowserModule,
     AppRoutingModule,
     BrowserAnimationsModule,
     MatToolbarModule,
     MatButtonModule,
+    MatIconModule,
     HomeModule,
     ManualModule,
     TransformationModule,
     JsonldModule,
-    IdentificationModule,
+    LoginModule,
   ],
   providers: [
-    {
-      provide: HTTP_INTERCEPTORS,
-      useClass: AuthInterceptor,
-      multi: true,
-    },
+    AuthGuard,
+    AuthenticationService,
   ],
   bootstrap: [AppComponent]
 })

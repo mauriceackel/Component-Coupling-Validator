@@ -2,7 +2,7 @@ import { Injectable } from "@angular/core";
 import { IInterface } from '../models/interface.model';
 import { IMapping } from '../models/mapping.model';
 import { KeyChain } from './jsontree.service';
-import { ValidationError } from '../utils/validation-error';
+import { ValidationError } from '../utils/errors/validation-error';
 
 @Injectable({
   providedIn: "root"

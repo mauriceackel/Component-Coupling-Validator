@@ -72,9 +72,9 @@ export class JsonldService {
             const providedKeyChain = searchResult[0]["@value"];
             result.push({ required: requiredKeyChain.split('.'), provided: providedKeyChain.split('.') })
           } else {
-            if (searchResult.length === 0) throw new Error(`Did not find key ${keyChain.join('.')} in provided`);
-            if (searchResult.length === 1) throw new Error(`No @value tag on result ${searchResult[0]} for key ${keyChain.join('.')}`);
-            if (searchResult.length > 1) throw new Error(`Ambiguous results ${searchResult} for key ${keyChain.join('.')}`);
+            if (searchResult.length === 0) console.log(`Did not find key ${keyChain.join('.')} in provided`);
+            if (searchResult.length === 1) console.log(`No @value tag on result ${searchResult[0]} for key ${keyChain.join('.')}`);
+            if (searchResult.length > 1) console.log(`Ambiguous results ${searchResult} for key ${keyChain.join('.')}`);
           }
         } else if (key === "@list") {
           //TODO: Ignored for now

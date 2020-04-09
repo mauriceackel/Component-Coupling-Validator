@@ -9,7 +9,7 @@ import { TransformationComponent } from './transformation.component';
 import { MappingZoneModule } from '~/app/components/mapping-zone/mapping-zone.module';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSelectModule } from '@angular/material/select';
-import { JoinPipeModule } from '~/app/utils/join.pipe';
+import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
 
 @NgModule({
   declarations: [

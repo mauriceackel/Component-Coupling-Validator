@@ -4,7 +4,7 @@ import { FormControl, Validators } from '@angular/forms';
 import { InterfaceService } from '~/app/services/interface.service';
 import { merge } from 'rxjs';
 import { IMappingPair, MappingType } from '~/app/models/mapping.model';
-import { ValidationError } from '~/app/utils/validation-error';
+import { ValidationError } from '~/app/utils/errors/validation-error';
 import { MappingService } from '~/app/services/mapping.service';
 import { ValidationService } from '~/app/services/validation.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';

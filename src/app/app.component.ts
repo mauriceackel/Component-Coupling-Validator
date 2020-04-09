@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { IdentificationService } from './services/identification.service';
+import { AuthenticationService } from './services/authentication.service';
 
 @Component({
   selector: 'app-root',
@@ -8,6 +8,6 @@ import { IdentificationService } from './services/identification.service';
 })
 export class AppComponent {
 
-  constructor(public identificationService: IdentificationService) { }
+  constructor(public identificationService: AuthenticationService) { }
 
 }
