@@ -1,8 +1,32 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    function isAuthenticated() {
+      return request.auth.uid != null
+    }
+
+    function isAdmin() {
+      return request.auth.uid == "l7d4BFz5NANhuEmpeiT6HyfqXct1"
+    }
+
+    match /interfaces/{interfaceId} {
+      // Everyone can read the interface descriptions
+      allow get, list: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+      							  isAdmin() ||
+      							  request.resource.data.endpoint == resource.data.endpoint &&
+      							  request.resource.data.request.body == resource.data.request.body &&
+      							  request.resource.data.response.body == resource.data.response.body
+                    );
+      allow create, delete: if isAdmin();
+    }
+
+    match /mappings/{mappingId} {
+      // Everyone can read the interface descriptions
+      allow get, list: if isAuthenticated();
+      allow create: if isAdmin() || request.auth.uid == request.resource.data.createdBy
+      allow update, delete: if isAdmin() || request.auth.uid == resource.data.createdBy
     }
   }
 }
