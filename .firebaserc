@@ -1,0 +1,14 @@
+{
+  "targets": {
+    "integrateit-df126": {
+      "hosting": {
+        "inegrateit": [
+          "integrateit-df126"
+        ]
+      }
+    }
+  },
+  "projects": {
+    "default": "integrateit-41c60"
+  }
+}
