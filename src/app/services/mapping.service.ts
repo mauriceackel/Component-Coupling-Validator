@@ -25,8 +25,7 @@ export class MappingService {
    * @param conditions A set of conditions that are applied when getting the results
    */
   public async getMappings(conditions: { [key: string]: any } = {}): Promise<Array<IMapping>> {
-    const rawMappings = (await this.mappingColl.get().toPromise()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const mappings = rawMappings.map(mapping => this.parseMapping(mapping));
+    const mappings = (await this.mappingColl.get().toPromise()).docs.map(doc => this.parseMapping(doc.id, doc.data()));
     const filteredMappings = mappings.filter(mapping => Object.entries(conditions).every(e => mapping[e[0]] === e[1]));
 
     return filteredMappings;
@@ -38,7 +37,7 @@ export class MappingService {
    */
   public async getMapping(id: string): Promise<IMapping> {
     const doc = await this.mappingColl.doc<IMapping>(id).get().toPromise();
-    return this.parseMapping({ id: doc.id, ...doc.data() });
+    return this.parseMapping(doc.id, doc.data());
   }
 
   /**
@@ -47,11 +46,7 @@ export class MappingService {
    */
   public async createMapping(mapping: IMapping) {
     const id = this.firestore.createId();
-    const elem: IMapping = {
-      ...this.serializeMapping(mapping),
-      id
-    };
-    return this.mappingColl.doc(id).set(elem);
+    return this.mappingColl.doc(id).set(this.serializeMapping(mapping));
   }
 
   /**
@@ -62,9 +57,10 @@ export class MappingService {
     return this.mappingColl.doc(mapping.id).update(this.serializeMapping(mapping));
   }
 
-  private parseMapping(mapping: any): IMapping {
+  private parseMapping(id: string, mapping: any): IMapping {
     return {
       ...mapping,
+      id
     }
   }
 

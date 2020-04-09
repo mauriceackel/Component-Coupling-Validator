@@ -1,3 +1,39 @@
-<div class="d-flex justify-content-center">
-  Welcome to the evaluation process, please select a matching method from the navigation bar at the top
+<div>
+  <div class="row">
+    <div class="col d-flex justify-content-center">
+      <h1>Welcome to the evaluation process, please select a task from the dropdown below</h1>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col d-flex justify-content-center">
+      <mat-form-field appearance="outline" class="flex-grow-1">
+        <mat-label>Task</mat-label>
+        <mat-select [disabled]="taskService.TaskRunning" [formControl]="task">
+          <mat-option *ngFor="let task of tasks" [value]="task">
+            {{task.name}}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+  <div class="row" *ngIf="task.value as task">
+    <div class="col">
+      <mat-card class="color-primary">
+        <mat-card-header>
+          <mat-card-title>{{task.name}}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          {{task.description}}
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button *ngIf="!taskService.TaskRunning" mat-raised-button (click)="startTask(task)">Start</button>
+          <ng-container *ngIf="taskService.TaskRunning">
+            <button mat-raised-button color="warn" (click)="abortTask()">Abort</button>
+            <button mat-raised-button (click)="startTask(task)">Continue</button>
+          </ng-container>
+
+        </mat-card-actions>
+      </mat-card>
+    </div>
+  </div>
 </div>

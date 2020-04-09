@@ -1,25 +1,28 @@
 <mat-toolbar class="toolbar" color="primary">
-  <div class="row flex-grow-1">
-    <div [routerLink]="['home']" class="col-4 cursor-pointer">
-      IntegrateIT
-    </div>
+  <div [disableChildren]="taskService.TaskRunning" class="row flex-grow-1">
 
-    <div class="col-4 d-flex justify-content-center">
-      <ng-container *ngIf="identificationService.User as user">
-        <button mat-button class="mx-1" [routerLink]="['manual']" routerLinkActive="link-active">Manual</button>
-        <button mat-button class="mx-1" [routerLink]="['transformation']" routerLinkActive="link-active">Transformation</button>
-        <button mat-button class="mx-1" [routerLink]="['jsonld']" routerLinkActive="link-active">JsonLD</button>
-      </ng-container>
-    </div>
-
-    <div class="col-4">
-      <div *ngIf="identificationService.User as user" class="float-right">
-        {{user.email}}
-        <button mat-icon-button (click)="identificationService.logout()">
-          <mat-icon>logout</mat-icon>
-        </button>
+      <div [routerLink]="['home']" class="col-4 cursor-pointer">
+        IntegrateIT
       </div>
-    </div>
+
+      <div class="col-4 d-flex justify-content-center">
+        <ng-container *ngIf="identificationService.User as user">
+          <button mat-button class="mx-1" [routerLink]="['manual']" routerLinkActive="link-active">Manual</button>
+          <button mat-button class="mx-1" [routerLink]="['transformation']"
+            routerLinkActive="link-active">Transformation</button>
+          <button mat-button class="mx-1" [routerLink]="['jsonld']" routerLinkActive="link-active">JsonLD</button>
+        </ng-container>
+      </div>
+
+      <div class="col-4">
+        <div *ngIf="identificationService.User as user" class="float-right">
+          {{user.email}}
+          <button mat-icon-button (click)="identificationService.logout()">
+            <mat-icon>logout</mat-icon>
+          </button>
+        </div>
+      </div>
+
   </div>
 </mat-toolbar>
 

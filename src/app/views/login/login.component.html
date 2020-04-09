@@ -10,7 +10,7 @@
             <mat-form-field appearance="outline">
               <mat-label>Email</mat-label>
               <input type="email" matInput formControlName="email" placeholder="Your email">
-              <button type="button" tabIndex="-1" matSuffix mat-icon-button (click)="identificationForm.get('email').setValue('')">
+              <button type="button" tabIndex="-1" matSuffix mat-icon-button (click)="identificationForm.get('email').reset()">
                 <mat-icon>clear</mat-icon>
               </button>
               <mat-error *ngIf="identificationForm.get('email').errors?.required">
@@ -27,7 +27,7 @@
             <mat-form-field appearance="outline">
               <mat-label>Password</mat-label>
               <input type="password" matInput formControlName="password" placeholder="Your password">
-              <button type="button" tabIndex="-1" matSuffix mat-icon-button (click)="identificationForm.get('password').setValue('')">
+              <button type="button" tabIndex="-1" matSuffix mat-icon-button (click)="identificationForm.get('password').reset()">
                 <mat-icon>clear</mat-icon>
               </button>
               <mat-error *ngIf="identificationForm.get('password').errors?.required">

@@ -15,8 +15,7 @@ export class InterfaceService {
   }
 
   public async getInterfaces(conditions: { [key: string]: string } = {}): Promise<Array<IInterface>> {
-    const rawInterfaces = (await this.interfaceColl.get().toPromise()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const interfaces = rawInterfaces.map(iface => this.parseInterface(iface));
+    const interfaces = (await this.interfaceColl.get().toPromise()).docs.map(doc => this.parseInterface(doc.id, doc.data()));
     const filteredInterfaces = interfaces.filter(iface => Object.entries(conditions).every(e => iface[e[0]] === e[1]));
 
     return filteredInterfaces;
@@ -24,12 +23,13 @@ export class InterfaceService {
 
   public async getInterface(id: string): Promise<IInterface> {
     const doc = await this.interfaceColl.doc<IInterface>(id).get().toPromise();
-    return this.parseInterface({ id: doc.id, ...doc.data() });
+    return this.parseInterface(doc.id, doc.data());
   }
 
-  private parseInterface(iface: any): IInterface {
+  private parseInterface(id: string, iface: any): IInterface {
     return {
       ...iface,
+      id,
       request: {
         body: iface.request.body && JSON.parse(iface.request.body),
         jsonLdContext: iface.request.jsonLdContext && JSON.parse(iface.request.jsonLdContext)
@@ -60,11 +60,7 @@ export class InterfaceService {
 
   public async createInterface(iface: IInterface) {
     const id = this.firestore.createId();
-    const elem: IInterface = {
-      ...this.serializeInterface(iface),
-      id
-    };
-    return this.interfaceColl.doc(id).set(elem);
+    return this.interfaceColl.doc(id).set(this.serializeInterface(iface));
   }
 
   public async updateInterface(iface: IInterface) {

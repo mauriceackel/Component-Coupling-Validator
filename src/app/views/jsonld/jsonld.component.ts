@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { IInterface } from '~/app/models/interface.model';
 import { FormControl, Validators } from '@angular/forms';
 import { InterfaceService } from '~/app/services/interface.service';
@@ -10,13 +10,15 @@ import { ValidationService } from '~/app/services/validation.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { GenericDialog, ButtonType } from '~/app/utils/generic-dialog/generic-dialog.component';
 import { JsonldService } from '~/app/services/jsonld.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TaskService } from '~/app/services/task.service';
 
 @Component({
   selector: 'app-jsonld',
   templateUrl: './jsonld.component.html',
   styleUrls: ['./jsonld.component.scss']
 })
-export class JsonldComponent implements OnInit {
+export class JsonldComponent implements OnInit, OnDestroy {
 
   public interfaces: Array<IInterface>;
 
@@ -28,7 +30,16 @@ export class JsonldComponent implements OnInit {
 
   public mappingError: ValidationError;
 
-  constructor(private interfaceService: InterfaceService, private mappingService: MappingService, private validationService: ValidationService, private dialog: MatDialog, private jsonldService: JsonldService) { }
+  constructor(
+    private interfaceService: InterfaceService,
+    private mappingService: MappingService,
+    private validationService: ValidationService,
+    private dialog: MatDialog,
+    private jsonldService: JsonldService,
+    private activatedRoute: ActivatedRoute,
+    private taskService: TaskService,
+    private router: Router
+  ) { }
 
   public async ngOnInit() {
     this.mappingSource = new FormControl(undefined, Validators.required);
@@ -41,6 +52,15 @@ export class JsonldComponent implements OnInit {
 
     const dualObserver = merge(this.mappingSource.valueChanges, this.mappingTarget.valueChanges);
     dualObserver.subscribe(() => this.initializeMapping());
+
+    this.activatedRoute.queryParams.subscribe(params => {
+      this.mappingSource.setValue(this.interfaces.find(i => i.id === params["sourceId"]));
+      this.mappingTarget.setValue(this.interfaces.find(i => i.id === params["targetId"]));
+    });
+  }
+
+  public ngOnDestroy() {
+    this.taskService.pauseTask();
   }
 
   private async initializeMapping() {
@@ -74,7 +94,13 @@ export class JsonldComponent implements OnInit {
       this.mappingError = undefined;
       await this.mappingService.createMapping(mapping);
 
-      this.showSuccessDialog()
+      if(this.taskService.TaskRunning) {
+        this.taskService.finishTask();
+        this.showTaskSuccessDialog();
+      } else {
+        this.showSuccessDialog();
+      }
+
     } catch (err) {
       if (err instanceof ValidationError) {
         this.mappingError = err;
@@ -98,6 +124,23 @@ export class JsonldComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe(() => {
       this.ngOnInit();
+    });
+  }
+
+  private showTaskSuccessDialog() {
+    const dialogRef: MatDialogRef<GenericDialog, void> = this.dialog.open(GenericDialog, {
+      position: {
+        top: "5%"
+      },
+      data: {
+        title: "Task Finished",
+        content: "The task was finished successfully.",
+        buttons: [ButtonType.OK]
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
+      this.router.navigate(["/home"])
     });
   }
 

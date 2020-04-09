@@ -18,6 +18,7 @@ import { AngularFireModule } from '@angular/fire';
 import { environment } from '../environments/environment';
 import { AuthenticationService, AuthGuard } from './services/authentication.service';
 import { MatIconModule } from '@angular/material/icon';
+import { DisableChildrenModule } from './utils/directives/disable-children.directive';
 
 @NgModule({
   declarations: [
@@ -38,6 +39,7 @@ import { MatIconModule } from '@angular/material/icon';
     TransformationModule,
     JsonldModule,
     LoginModule,
+    DisableChildrenModule,
   ],
   providers: [
     AuthGuard,

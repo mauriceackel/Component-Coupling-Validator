@@ -8,14 +8,15 @@ import { ValidationService } from '~/app/services/validation.service';
 import { ValidationError } from '~/app/utils/errors/validation-error';
 import { MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { GenericDialog, ButtonType } from '~/app/utils/generic-dialog/generic-dialog.component';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TaskService } from '~/app/services/task.service';
 
 @Component({
   selector: 'app-manual',
   templateUrl: './manual.component.html',
   styleUrls: ['./manual.component.scss']
 })
-export class ManualComponent implements OnInit {
+export class ManualComponent implements OnInit, OnDestroy {
 
   public interfaces: Array<IInterface>;
 
@@ -27,7 +28,15 @@ export class ManualComponent implements OnInit {
 
   public mappingError: ValidationError;
 
-  constructor(private interfaceService: InterfaceService, private mappingService: MappingService, private validationService: ValidationService, private dialog: MatDialog) { }
+  constructor(
+    private interfaceService: InterfaceService,
+    private mappingService: MappingService,
+    private validationService: ValidationService,
+    private dialog: MatDialog,
+    private activatedRoute: ActivatedRoute,
+    private taskService: TaskService,
+    private router: Router
+  ) { }
 
   public async ngOnInit() {
     this.mappingSource = new FormControl(undefined, Validators.required);
@@ -37,6 +46,15 @@ export class ManualComponent implements OnInit {
     this.responseMappingPairs = new Array<IMappingPair>();
 
     this.interfaces = await this.interfaceService.getInterfaces();
+
+    this.activatedRoute.queryParams.subscribe(params => {
+      this.mappingSource.setValue(this.interfaces.find(i => i.id === params["sourceId"]));
+      this.mappingTarget.setValue(this.interfaces.find(i => i.id === params["targetId"]));
+    });
+  }
+
+  public ngOnDestroy() {
+    this.taskService.pauseTask();
   }
 
   public async finishMapping() {
@@ -48,7 +66,13 @@ export class ManualComponent implements OnInit {
       this.mappingError = undefined;
       await this.mappingService.createMapping(mapping);
 
-      this.showSuccessDialog()
+      if(this.taskService.TaskRunning) {
+        this.taskService.finishTask();
+        this.showTaskSuccessDialog();
+      } else {
+        this.showSuccessDialog();
+      }
+
     } catch (err) {
       if (err instanceof ValidationError) {
         this.mappingError = err;
@@ -74,4 +98,22 @@ export class ManualComponent implements OnInit {
       this.ngOnInit();
     });
   }
+
+  private showTaskSuccessDialog() {
+    const dialogRef: MatDialogRef<GenericDialog, void> = this.dialog.open(GenericDialog, {
+      position: {
+        top: "5%"
+      },
+      data: {
+        title: "Task Finished",
+        content: "The task was finished successfully.",
+        buttons: [ButtonType.OK]
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
+      this.router.navigate(["/home"])
+    });
+  }
+
 }
