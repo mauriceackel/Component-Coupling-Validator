@@ -5,6 +5,7 @@ import { IMappingPair } from '../models/mapping.model';
 import { KeyChain } from './jsontree.service';
 import { IInterface } from '../models/interface.model';
 import { MappingDirection } from './mapping.service';
+import { arrayEquals, arrayContainsArray } from '../utils/array-utils';
 
 @Injectable({
   providedIn: "root"
@@ -65,16 +66,18 @@ export class JsonldService {
       for (const key in obj) {
         if (key === "@value") {
           //This is a lowest level element, now search in provided based on key chain
-          //TODO: How to handle nesting? Idea: If element not found, remove it and try to find a match when only looking at children
-          const requiredKeyChain = obj[key];
-          const searchResult = this.findKeyInExpandedJsonLd(provided, keyChain);
-          if (searchResult.length === 1 && searchResult[0]["@value"] !== undefined) {
-            const providedKeyChain = searchResult[0]["@value"];
-            result.push({ required: requiredKeyChain.split('.'), provided: providedKeyChain.split('.') })
+          const requiredKeyChain: string = obj[key];
+
+          const flattenedProvided = this.flattenExpanded(provided);
+          let match = flattenedProvided.find(elem => arrayEquals(elem.key, keyChain));
+          if(!match) {
+            match = flattenedProvided.find(elem => arrayContainsArray(keyChain, elem.key) || arrayContainsArray(elem.key, keyChain));
+          }
+
+          if(match) {
+            result.push({ required: requiredKeyChain.split('.'), provided: match.value.split('.') })
           } else {
-            if (searchResult.length === 0) console.log(`Did not find key ${keyChain.join('.')} in provided`);
-            if (searchResult.length === 1) console.log(`No @value tag on result ${searchResult[0]} for key ${keyChain.join('.')}`);
-            if (searchResult.length > 1) console.log(`Ambiguous results ${searchResult} for key ${keyChain.join('.')}`);
+            console.log("Did not find match for", keyChain.join('.'), "in provided");
           }
         } else if (key === "@list") {
           //TODO: Ignored for now
@@ -89,15 +92,18 @@ export class JsonldService {
     return result;
   }
 
-  private findKeyInExpandedJsonLd(expandedJsonLd: any, keyChain: KeyChain) {
-    return keyChain.reduce((arr, key) => {
-      for (const elem of arr) {
-        if (elem[key] !== undefined) {
-          return elem[key];
+  private flattenExpanded(expandedJsonLd: Array<any>, keyChain: KeyChain = []) {
+    let result = new Array<{key: KeyChain, value: string}>();
+    for (const elem of expandedJsonLd) {
+      for(const key in elem) {
+        if(elem[key] instanceof Array) {
+          result.push(...this.flattenExpanded(elem[key], [...keyChain, key]));
+        } else if(key === "@value") {
+          result.push({ key: keyChain, value: elem[key] });
         }
       }
-      return [];
-    }, expandedJsonLd);
+    }
+    return result;
   }
 
   public async buildMappingPairs(source: IInterface, target: IInterface): Promise<{ request: Array<IMappingPair>, response: Array<IMappingPair> }> {
