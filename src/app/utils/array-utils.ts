@@ -13,3 +13,19 @@ export function arrayEquals(a, b) {
   }
   return true;
 }
+
+export function arrayContainsArray(master, sub) {
+  if (master === sub) return true;
+  if (master == null || sub == null) return false;
+  if (sub.length == 0) return false;
+
+  outer: for(let i = 0; i <= master.length - sub.length; i++) {
+    for(let j = 0; j < sub.length; j++) {
+      if(master[i + j] !== sub[j]) {
+        continue outer;
+      }
+    }
+    return true;
+  }
+  return false;
+}
