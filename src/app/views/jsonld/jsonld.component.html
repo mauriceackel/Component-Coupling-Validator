@@ -3,7 +3,7 @@
     <div class="col d-flex">
       <mat-form-field appearance="outline" class="flex-grow-1">
         <mat-label>Mapping Source</mat-label>
-        <mat-select [formControl]="mappingSource">
+        <mat-select [disabled]="mappingSource.valid && mappingTarget.valid" [formControl]="mappingSource">
           <mat-option *ngFor="let interface of interfaces" [value]="interface">
             {{interface.endpoint}}
           </mat-option>
@@ -13,7 +13,7 @@
     <div class="col d-flex">
       <mat-form-field appearance="outline" class="flex-grow-1">
         <mat-label>Mapping Target</mat-label>
-        <mat-select [formControl]="mappingTarget">
+        <mat-select [disabled]="mappingSource.valid && mappingTarget.valid" [formControl]="mappingTarget">
           <mat-option *ngFor="let interface of interfaces" [value]="interface">
             {{interface.endpoint}}
           </mat-option>
@@ -115,6 +115,7 @@
   </div>
   <div class="row mt-5">
     <div class="col">
+      <button mat-raised-button color="warn" [disabled]="!(mappingSource.valid && mappingTarget.valid)" (click)="reset()">Reset</button>
       <button mat-raised-button color="accent" class="float-right" [disabled]="!(mappingSource.valid && mappingTarget.valid)" (click)="finishMapping()">Finish Mapping</button>
     </div>
   </div>

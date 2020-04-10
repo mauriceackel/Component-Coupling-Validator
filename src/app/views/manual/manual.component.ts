@@ -82,6 +82,18 @@ export class ManualComponent implements OnInit, OnDestroy {
     }
   }
 
+  public reset() {
+    this.router.navigate([], {
+      queryParams: {
+        sourceId: null,
+        targetId: null,
+      },
+      queryParamsHandling: 'merge'
+    });
+    this.taskService.abortTask();
+    this.ngOnInit();
+  }
+
   private showSuccessDialog() {
     const dialogRef: MatDialogRef<GenericDialog, void> = this.dialog.open(GenericDialog, {
       position: {
@@ -95,7 +107,7 @@ export class ManualComponent implements OnInit, OnDestroy {
     });
 
     dialogRef.afterClosed().subscribe(() => {
-      this.ngOnInit();
+      this.reset();
     });
   }
 

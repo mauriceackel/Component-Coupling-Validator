@@ -85,6 +85,18 @@ export class JsonldComponent implements OnInit, OnDestroy {
     this.initializeMapping();
   }
 
+  public reset() {
+    this.router.navigate([], {
+      queryParams: {
+        sourceId: null,
+        targetId: null,
+      },
+      queryParamsHandling: 'merge'
+    });
+    this.taskService.abortTask();
+    this.ngOnInit();
+  }
+
   public async finishMapping() {
     const mapping = this.mappingService.buildMapping(this.mappingSource.value, this.mappingTarget.value, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
 
@@ -123,7 +135,7 @@ export class JsonldComponent implements OnInit, OnDestroy {
     });
 
     dialogRef.afterClosed().subscribe(() => {
-      this.ngOnInit();
+      this.reset();
     });
   }
 
