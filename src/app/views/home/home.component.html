@@ -1,7 +1,7 @@
 <div>
   <div class="row">
     <div class="col d-flex justify-content-center">
-      <h1>Welcome to the evaluation process, please select a task from the dropdown below</h1>
+      <h1>Welcome to the evaluation process, please read the instructions and remarks first!</h1>
     </div>
   </div>
   <div class="row">
@@ -31,8 +31,158 @@
             <button mat-raised-button color="warn" (click)="abortTask()">Abort</button>
             <button mat-raised-button (click)="startTask(task)">Continue</button>
           </ng-container>
-
         </mat-card-actions>
+      </mat-card>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <mat-card>
+        <mat-card-content>
+          Please read the following instructions the task carefully!
+          <br><br>
+          <ul>
+          <li>The goal of this evaluation is to test three methods for formalizing mappings 
+            of HTTP-Request and -Responses Mappings based on JSON-Attributes</li>
+            <ul>
+              <li>The "MANUAL" method is equivalent to implementing a software adpater</li>
+              <li>The "TRANSFORMATION" method is reusing already present mappings stored in a knowledge base</li>
+              <li>The "JSONLD" method is equivalent to using a standard for describing mappings</li>
+            </ul>
+          <li>The evaluation period will last from 16.04.2020 until 03.05.2020</li>
+          <li>You may need longer for solving the tasks in the beginning. Expected for a task up to 20 minutes of workload
+          </li>
+          <li>Please familiarize yourself with the different views first.Therefore, please click on the views MANUAL/TRANSOFRMATION/JSONLD and 
+            select "POST host../humans" as a Mapping Source and "GET exam.../users" as a Mapping Target</li>
+          <li>There are several depencendies when working on the tasks listed. These are defined as follows:</li>
+          <br>
+          <table style="width:100%; text-align:center;" border="1">
+            <tr>
+              <th>Taskname</th>
+              <th>Dependend on</th>
+              <th>Participant</th>
+              <th>Inform next Participant</th>
+            </tr>
+            <tr>
+              <td>MANUAL WooCommerce-Shopify</td>
+              <td>-</td>
+              <td>Peter, Flavia, Raluca</td>
+              <th>-</th>
+            </tr>
+            <tr>
+              <td>MANUAL Billwerk-Shopify</td>
+              <td>-</td>
+              <td>Marius, Bogdan</td>
+              <th>-</th>
+            </tr>
+            <tr>
+              <td>MANUAL WooCommerce-Billwerk</td>
+              <td>-</td>
+              <td>Marius, Tobias</td>
+              <th>-</th>
+            </tr>
+            <tr>
+              <td>TRANSFORMATION Billwerk-Shopify</td>
+              <td>-</td>
+              <td>Raluca</td>
+              <th>Peter</th>
+            </tr>
+            <tr>
+              <td>TRANSFORMATION WooCommerce-Billwerk</td>
+              <td>-</td>
+              <td>Flavia</td>
+              <th>Peter</th>
+            </tr>
+            <tr>
+              <td>TRANSFORMATION WooCommerce-Shopify</td>
+              <td>TRANSFORMATION WooCommerce-Billwerk and TRANSFORMATION Billwerk-Shopify</td>
+              <td>Peter</td>
+              <th>-</th>
+            </tr>
+            <tr>
+              <td>JSONLD WooCommerce-Billwerk</td>
+              <td>-</td>
+              <td>Marius</td>
+              <th>Tobias</th>
+            </tr>
+            <tr>
+              <td>JSONLD Billwerk-Shopify</td>
+              <td>JSONLD WooCommerce-Billwerk</td>
+              <td>Tobias</td>
+              <th>Bogdan</th>
+            </tr>
+            <tr>
+              <td>JSONLD WooCommerce-Billwerk</td>
+              <td>JSONLD Billwerk-Shopify</td>
+              <td>Bogdan</td>
+              <th>-</th>
+            </tr>
+          </table>
+        </ul>
+        Process of executing a Task:
+        <br><br>
+        <ol>
+          <li>Choose the assigned tasks to your name indicated by "Participant" from the dropdown menu "Task"
+          <ul>
+            <li>If the colum "Dependend is not empty, you need to wait until you are informed by the other participant (e.g. via Discord, ..) 
+            that they have finished their task</li>
+            <li>If the colum "Inform next Participant" is not empty, please inform the mentioned participant (e.g. via Discord, ..)
+              that the task has been finished.
+            </li>
+          </ul>
+        </li>
+          <li>Click on "Start"
+          <ul>
+            <li>MANUAL AND TRANSFORMATION Tasks</li>
+            <ul>
+              <li>Select pairs of attributes from the left and right by clicking on them based on your interpretation</li>
+              <li>After selecting one attribute from each side, click on "Map Selceted"</li>
+              <li>For Request Mappings, all attributes from the "Target Request Body" must be mapped</li>
+              <li>For Response Mappings, all attributes from the "Source Response Body" must be mapped</li>
+              <li>If some mappings are prefilled, you can reuse them immmediatly</li>
+            </ul>
+            <li>JSONLD Tasks</li>
+            <ul>
+              <li>You may need to textually specify the mappings using the JSONLD syntax prior to using the graphical mapping view</li>
+              <li>First insert/adapte the text in the "JSONLD Editor"</li>
+              <li>For searching <a href="https://schema.org" target="_blank">schema.org</a> please use the Custom Search field</li>
+              <li>If you cannot identify a desired item within the schema.org vocabulary, you can also use <a href="http://dbpedia.org/fct/" target="_blank">DBpedia</a> by using the Entity Label Lookup</li>
+              <ul><li>You can identify the URL by clicking on the "JSON-LD" Logo at the bottom of the result page and copy and paste the @id field</li></ul>
+              <li>Please "Store" the textua definitions everytime you make a change</li>
+              <li>Second, continue with the "Mapping" View</li>
+              <li>All information from both JSON-LD descriptions are rendered into this view automatically if they can be parsed</li>
+              <li>If you cannot find a suitable URL that fits your attribute, you can map the attributes similar to the MANUAL/TRANSFORMATION tasks as well</li>
+            </ul>
+          </ul>
+        </li>
+        <li>After you have mapped all required attirbutes, you can finish your task by clicking on Finish Mapping"
+          <ul>
+            <li>When the task is sucessfully finished, you will see a corresponding message</li>
+            <li>If there exist any error, then an Error-Message will be displayed at the bottom of the site</li>
+          </ul>
+        </li>
+          <li>You can abort abort a task or reset the application at any time
+          <ul>
+            <li>In the "Task Overview", clicking on "Abort" may be required if you selcted the wrong task</li>
+            <li>In the "Mapping Overview", clicking on "Reset" may be required if you cannot finish a task for any reason. Please send 
+              a short notice to <a href="mailto:burzlaff@es.uni-mannheim.de">burzlaff@es.uni-mannheim.de</a> why you could not finish the task
+            including the displayed error message
+          </li>
+          </ul>
+        </li>
+        </ol>
+          Please note the following remarks for working with this prototype:
+          <br><br>
+          <ul>
+          <li>You can navigate back to this overview page at any time by clicking on [BACK TO TASK OVERVIEW]</li>
+          <li>You can open multiple tabs displaying different site content at the same time</li>
+          <li>If you cannot find a button or other UI elements, try to scroll up and down</li>
+          <li>Try not to use the refresh functionality of your browser (e.g. STRG+R). This may result in loss of unsaved work</li>
+          <li>When you start a task, the time is measured automatically
+          <li>You can also send any suggestions for improvements (e.g. annotated screenshot) at any 
+            time to <a href="mailto:burzlaff@es.uni-mannheim.de">burzlaff@es.uni-mannheim.de</a></li>
+          </ul>
+        </mat-card-content>
       </mat-card>
     </div>
   </div>
