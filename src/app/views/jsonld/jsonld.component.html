@@ -27,7 +27,7 @@
         <mat-tab label="Request">
           <div class="py-4 px-2">
             <mat-accordion multi="true">
-              <mat-expansion-panel [expanded]="mappingSource.valid && mappingTarget.valid">
+              <mat-expansion-panel [disabled]="!mappingSource.valid || !mappingTarget.valid" [expanded]="mappingSource.valid && mappingTarget.valid">
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     <b>JsonLD Editor</b>
@@ -70,7 +70,7 @@
         <mat-tab label="Response">
           <div class="py-4 px-2">
             <mat-accordion multi="true">
-              <mat-expansion-panel [expanded]="mappingSource.valid && mappingTarget.valid">
+              <mat-expansion-panel [disabled]="!mappingSource.valid || !mappingTarget.valid" [expanded]="mappingSource.valid && mappingTarget.valid">
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     <b>JsonLD Editor</b>
