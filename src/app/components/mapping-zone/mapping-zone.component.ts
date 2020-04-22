@@ -12,6 +12,8 @@ import { arrayEquals } from '~/app/utils/array-utils';
 })
 export class MappingZoneComponent implements OnInit, OnChanges {
 
+  @Input("isRequest") public isRequest: boolean;
+
   @Input("leftHeading") public leftHeading: string;
   @Input("rightHeading") public rightHeading: string;
 
