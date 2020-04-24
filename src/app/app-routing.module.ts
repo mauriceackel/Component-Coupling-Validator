@@ -6,6 +6,7 @@ import { HomeComponent } from './views/home/home.component';
 import { ManualComponent } from './views/manual/manual.component';
 import { TransformationComponent } from './views/transformation/transformation.component';
 import { JsonldComponent } from './views/jsonld/jsonld.component';
+import { DescribeComponent } from './views/describe/describe.component';
 
 const routes: Routes = [
   {
@@ -26,6 +27,11 @@ const routes: Routes = [
     path: 'jsonld',
     canActivate: [AuthGuard],
     component: JsonldComponent,
+  },
+  {
+    path: 'describe',
+    canActivate: [AuthGuard],
+    component: DescribeComponent,
   },
   {
     path: 'home',

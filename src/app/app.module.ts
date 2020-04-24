@@ -19,6 +19,7 @@ import { environment } from '../environments/environment';
 import { AuthenticationService, AuthGuard } from './services/authentication.service';
 import { MatIconModule } from '@angular/material/icon';
 import { DisableChildrenModule } from './utils/directives/disable-children.directive';
+import { DescribeModule } from './views/describe/describe.module';
 
 @NgModule({
   declarations: [
@@ -36,6 +37,7 @@ import { DisableChildrenModule } from './utils/directives/disable-children.direc
     MatIconModule,
     HomeModule,
     ManualModule,
+    DescribeModule,
     TransformationModule,
     JsonldModule,
     LoginModule,

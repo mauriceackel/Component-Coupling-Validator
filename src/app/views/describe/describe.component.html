@@ -1,0 +1,37 @@
+<ng-container>
+  <div class="row">
+    <div class="col d-flex">
+      <mat-form-field appearance="outline" class="flex-grow-1">
+        <mat-label>Interface</mat-label>
+        <mat-select [disabled]="selectedInterface.valid" [formControl]="selectedInterface">
+          <mat-option *ngFor="let interface of interfaces" [value]="interface">
+            {{interface.endpoint}}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <h3>JsonLD Editor – Edit JsonLD context here
+        <mat-icon class="mx-2" matTooltip="Only enter the JsonLd context without the enclosing @context">
+          info
+        </mat-icon>
+      </h3>
+
+      <app-editor-zone leftHeading="Request Context" rightHeading="Response Context"
+        [leftData]="selectedInterface.value?.request.jsonLdContext"
+        [rightData]="selectedInterface.value?.response.jsonLdContext"
+        (saveLeft)="save($event, selectedInterface.value, selectedInterface.value?.request)"
+        (saveRight)="save($event, selectedInterface.value, selectedInterface.value?.response)">
+      </app-editor-zone>
+    </div>
+  </div>
+  <div class="row mt-5">
+    <div class="col">
+      <button mat-raised-button color="warn" [disabled]="!selectedInterface.valid" (click)="reset()">Reset</button>
+      <button mat-raised-button color="accent" class="float-right"
+        [disabled]="!selectedInterface.valid" (click)="finish()">Finish</button>
+    </div>
+  </div>
+</ng-container>
