@@ -9,6 +9,8 @@ export class JsonEditorComponent implements AfterViewInit, OnChanges {
 
   public uuid : string;
 
+  @Input("disabled") public disabled: boolean;
+
   @Input("data") public data: any;
   @Output("jsonChange") public jsonChange = new EventEmitter<any>();
 
@@ -34,7 +36,7 @@ export class JsonEditorComponent implements AfterViewInit, OnChanges {
   }
 
   public ngOnChanges(changes: SimpleChanges) {
-    if(changes.data?.currentValue === undefined) {
+    if(changes.data === undefined || !changes.data.currentValue) {
       this.jsonEditor.set({});
     } else if (changes.data?.currentValue && JSON.stringify(changes.data.currentValue) !== JSON.stringify(this.jsonEditor.get())) {
       this.jsonEditor.set(changes.data.currentValue);
@@ -62,6 +64,12 @@ export class JsonEditorComponent implements AfterViewInit, OnChanges {
     } else {
       this.hasChanges = true;
       this.valid = false;
+    }
+  }
+
+  public handleKeyDown(event: KeyboardEvent) {
+    if(this.disabled) {
+      event.preventDefault();
     }
   }
 
