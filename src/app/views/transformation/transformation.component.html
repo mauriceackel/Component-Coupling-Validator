@@ -5,7 +5,7 @@
         <mat-label>Mapping Source</mat-label>
         <mat-select [disabled]="mappingSource.valid && mappingTarget.valid" [formControl]="mappingSource">
           <mat-option *ngFor="let interface of interfaces" [value]="interface">
-            {{interface.endpoint}}
+            {{interface.name}}
           </mat-option>
         </mat-select>
       </mat-form-field>
@@ -15,7 +15,7 @@
         <mat-label>Mapping Target</mat-label>
         <mat-select [disabled]="mappingSource.valid && mappingTarget.valid" [formControl]="mappingTarget">
           <mat-option *ngFor="let interface of interfaces" [value]="interface">
-            {{interface.endpoint}}
+            {{interface.name}}
           </mat-option>
         </mat-select>
       </mat-form-field>

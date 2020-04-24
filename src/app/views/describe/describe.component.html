@@ -5,7 +5,7 @@
         <mat-label>Interface</mat-label>
         <mat-select [disabled]="selectedInterface.valid" [formControl]="selectedInterface">
           <mat-option *ngFor="let interface of interfaces" [value]="interface">
-            {{interface.endpoint}}
+            {{interface.name}}
           </mat-option>
         </mat-select>
       </mat-form-field>
