@@ -11,6 +11,8 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
 import { GenericDialogModule } from '~/app/utils/generic-dialog/generic-dialog.module';
+import { RequestZoneModule } from '~/app/components/request-zone/request-zone.module';
+import { MatExpansionModule } from '@angular/material/expansion';
 
 @NgModule({
   declarations: [
@@ -28,6 +30,8 @@ import { GenericDialogModule } from '~/app/utils/generic-dialog/generic-dialog.m
     MatCardModule,
     JoinPipeModule,
     GenericDialogModule,
+    RequestZoneModule,
+    MatExpansionModule,
   ],
   exports: [
     ManualComponent

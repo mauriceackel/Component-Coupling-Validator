@@ -10,6 +10,8 @@ import { MappingZoneModule } from '~/app/components/mapping-zone/mapping-zone.mo
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSelectModule } from '@angular/material/select';
 import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { RequestZoneModule } from '~/app/components/request-zone/request-zone.module';
 
 @NgModule({
   declarations: [
@@ -26,6 +28,8 @@ import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
     MatTabsModule,
     MatSelectModule,
     JoinPipeModule,
+    MatExpansionModule,
+    RequestZoneModule,
   ],
   exports: [
     TransformationComponent

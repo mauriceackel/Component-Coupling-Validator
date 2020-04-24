@@ -45,6 +45,30 @@
   </div>
   <div class="row mt-5">
     <div class="col">
+      <mat-accordion multi="true">
+        <mat-expansion-panel [disabled]="!mappingSource.valid || !mappingTarget.valid">
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <b>Test Mapping</b>
+            </mat-panel-title>
+            <mat-panel-description>
+              {{(!mappingSource.valid || !mappingTarget.valid) ? "Select a source and target interface first" : "Expand this to test a request with your current mapping"}}
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <div class="pt-2">
+            <app-request-zone leftHeading="Input Data" rightHeading="Output Data"
+              [inputData]="mappingSource.value?.request.body" [mappingSource]="mappingSource.value"
+              [mappingTarget]="mappingTarget.value" [requestMappingPairs]="requestMappingPairs"
+              [responseMappingPairs]="responseMappingPairs">
+            </app-request-zone>
+          </div>
+        </mat-expansion-panel>
+      </mat-accordion>
+    </div>
+  </div>
+  <div class="row mt-5">
+    <div class="col">
       <button mat-raised-button color="warn" [disabled]="!(mappingSource.valid && mappingTarget.valid)" (click)="reset()">Reset</button>
       <button mat-raised-button color="accent" class="float-right" [disabled]="!(mappingSource.valid && mappingTarget.valid)" (click)="finishMapping()">Finish Mapping</button>
     </div>
