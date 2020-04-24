@@ -238,11 +238,11 @@ export class MappingService {
     const responseInput = responseChain.pop();
 
     const requestMapping = requestChain.reduce((input, mapping) => {
-      return jsonata(this.stringifyedToJsonata(mapping.requestMapping)).evaluate(input);
+      return jsonata(stringifyedToJsonata(mapping.requestMapping)).evaluate(input);
     }, JSON.parse(requestInput.requestMapping));
 
     const responseMapping = responseChain.reduceRight((input, mapping) => {
-      return jsonata(this.stringifyedToJsonata(mapping.responseMapping)).evaluate(input);
+      return jsonata(stringifyedToJsonata(mapping.responseMapping)).evaluate(input);
     }, JSON.parse(responseInput.responseMapping));
 
     return {
@@ -255,19 +255,19 @@ export class MappingService {
       responseMapping: JSON.stringify(responseMapping)
     }
   }
+}
 
-  /**
+export enum MappingDirection {
+  INPUT, OUTPUT
+}
+
+/**
    * Method that takes a stringified JSON object as input and removes the quotes of all string properties.
    *
    * Exmaple:
    * { "foo":"bar" } --> { "foo":bar }
    */
-  private stringifyedToJsonata(obj: string) {
-    const keyValueRegex = /(?:\"|\')([^"]*)(?:\"|\')(?=:)(?:\:\s*)(?:\"|\')?(true|false|[^"]*)(?:"(?=\s*(,|})))/g;
-    return obj.replace(keyValueRegex, '"$1":$2');
-  }
-}
-
-export enum MappingDirection {
-  INPUT, OUTPUT
+export function stringifyedToJsonata(obj: string) {
+  const keyValueRegex = /(?:\"|\')([^"]*)(?:\"|\')(?=:)(?:\:\s*)(?:\"|\')?(true|false|[^"]*)(?:"(?=\s*(,|})))/g;
+  return obj.replace(keyValueRegex, '"$1":$2');
 }
