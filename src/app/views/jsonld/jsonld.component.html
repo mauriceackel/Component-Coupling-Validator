@@ -27,23 +27,21 @@
         <mat-tab label="Request">
           <div class="py-4 px-2">
             <mat-accordion multi="true">
-              <mat-expansion-panel [disabled]="!mappingSource.valid || !mappingTarget.valid" [expanded]="mappingSource.valid && mappingTarget.valid">
+              <mat-expansion-panel [disabled]="!mappingSource.valid || !mappingTarget.valid"
+                [expanded]="mappingSource.valid && mappingTarget.valid">
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     <b>JsonLD Editor</b>
-                    <mat-icon class="mx-2" matTooltip="Only enter the JsonLd context without the enclosing @context">
-                      info
-                    </mat-icon>
                   </mat-panel-title>
                   <mat-panel-description>
-                    Edit JsonLD context here
+                    View JsonLD context here
                   </mat-panel-description>
                 </mat-expansion-panel-header>
 
                 <div class="pt-2">
-                  <app-editor-zone leftHeading="Source Request Context" rightHeading="Target Request Context"
-                    [leftData]="mappingSource.value?.request.jsonLdContext" [rightData]="mappingTarget.value?.request.jsonLdContext"
-                    (saveLeft)="save($event, mappingSource.value, mappingSource.value?.request)" (saveRight)="save($event, mappingTarget.value, mappingTarget.value?.request)">
+                  <app-editor-zone [disabled]="true" leftHeading="Source Request Context"
+                    rightHeading="Target Request Context" [leftData]="mappingSource.value?.request.jsonLdContext"
+                    [rightData]="mappingTarget.value?.request.jsonLdContext">
                   </app-editor-zone>
                 </div>
               </mat-expansion-panel>
@@ -58,9 +56,9 @@
                 </mat-expansion-panel-header>
 
                 <div class="pt-2">
-                  <app-mapping-zone [isRequest]="true" leftHeading="Source Request Body" rightHeading="Target Request Body"
-                    [leftData]="mappingSource.value?.request.body" [rightData]="mappingTarget.value?.request.body"
-                    [mappingPairs]="requestMappingPairs">
+                  <app-mapping-zone [isRequest]="true" leftHeading="Source Request Body"
+                    rightHeading="Target Request Body" [leftData]="mappingSource.value?.request.body"
+                    [rightData]="mappingTarget.value?.request.body" [mappingPairs]="requestMappingPairs">
                   </app-mapping-zone>
                 </div>
               </mat-expansion-panel>
@@ -70,7 +68,8 @@
         <mat-tab label="Response">
           <div class="py-4 px-2">
             <mat-accordion multi="true">
-              <mat-expansion-panel [disabled]="!mappingSource.valid || !mappingTarget.valid" [expanded]="mappingSource.valid && mappingTarget.valid">
+              <mat-expansion-panel [disabled]="!mappingSource.valid || !mappingTarget.valid"
+                [expanded]="mappingSource.valid && mappingTarget.valid">
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     <b>JsonLD Editor</b>
@@ -84,9 +83,9 @@
                 </mat-expansion-panel-header>
 
                 <div class="pt-2">
-                  <app-editor-zone leftHeading="Source Response Context" rightHeading="Target Response Context"
-                    [leftData]="mappingSource.value?.response.jsonLdContext" [rightData]="mappingTarget.value?.response.jsonLdContext"
-                    (saveLeft)="save($event, mappingSource.value, mappingSource.value?.response)" (saveRight)="save($event, mappingTarget.value, mappingTarget.value?.response)">
+                  <app-editor-zone [disabled]="true" leftHeading="Source Response Context"
+                    rightHeading="Target Response Context" [leftData]="mappingSource.value?.response.jsonLdContext"
+                    [rightData]="mappingTarget.value?.response.jsonLdContext">
                   </app-editor-zone>
                 </div>
               </mat-expansion-panel>
@@ -101,9 +100,9 @@
                 </mat-expansion-panel-header>
 
                 <div class="pt-2">
-                  <app-mapping-zone [isRequest]="false" leftHeading="Source Response Body" rightHeading="Target Response Body"
-                    [leftData]="mappingSource.value?.response.body" [rightData]="mappingTarget.value?.response.body"
-                    [mappingPairs]="responseMappingPairs">
+                  <app-mapping-zone [isRequest]="false" leftHeading="Source Response Body"
+                    rightHeading="Target Response Body" [leftData]="mappingSource.value?.response.body"
+                    [rightData]="mappingTarget.value?.response.body" [mappingPairs]="responseMappingPairs">
                   </app-mapping-zone>
                 </div>
               </mat-expansion-panel>
@@ -115,8 +114,10 @@
   </div>
   <div class="row mt-5">
     <div class="col">
-      <button mat-raised-button color="warn" [disabled]="!(mappingSource.valid && mappingTarget.valid)" (click)="reset()">Reset</button>
-      <button mat-raised-button color="accent" class="float-right" [disabled]="!(mappingSource.valid && mappingTarget.valid)" (click)="finishMapping()">Finish Mapping</button>
+      <button mat-raised-button color="warn" [disabled]="!(mappingSource.valid && mappingTarget.valid)"
+        (click)="reset()">Reset</button>
+      <button mat-raised-button color="accent" class="float-right"
+        [disabled]="!(mappingSource.valid && mappingTarget.valid)" (click)="finishMapping()">Finish Mapping</button>
     </div>
   </div>
   <div class="mt-2" *ngIf="mappingError">

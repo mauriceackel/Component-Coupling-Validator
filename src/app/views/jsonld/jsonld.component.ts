@@ -77,14 +77,6 @@ export class JsonldComponent implements OnInit, OnDestroy {
     }
   }
 
-  public save(jsonLdContext: any, iface: IInterface, ref: { jsonLdContext: any }) {
-    if (iface) {
-      ref.jsonLdContext = jsonLdContext;
-      this.interfaceService.updateInterface(iface);
-    }
-    this.initializeMapping();
-  }
-
   public reset() {
     this.router.navigate([], {
       queryParams: {
