@@ -6,5 +6,12 @@ export interface ITask {
   description: string
   sourceInterface: string
   targetInterface: string
-  mappingType: MappingType
+  type: TaskType
+}
+
+export enum TaskType {
+  MANUAL_MAP,
+  TRANSFORM_MAP,
+  JSONLD_MAP,
+  JSONLD_DESC
 }

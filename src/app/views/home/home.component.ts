@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormControl, Validators } from '@angular/forms';
-import { ITask } from '~/app/models/task.model';
+import { ITask, TaskType } from '~/app/models/task.model';
 import { TaskService } from '~/app/services/task.service';
 import { Router } from '@angular/router';
 import { MappingType } from '~/app/models/mapping.model';
@@ -28,10 +28,11 @@ export class HomeComponent implements OnInit {
   public startTask(task: ITask) {
     this.taskService.startTask(task);
 
-    switch(task.mappingType) {
-      case MappingType.MANUAL: this.router.navigate(['/manual'], { queryParams: { sourceId: task.sourceInterface, targetId: task.targetInterface } }); break;
-      case MappingType.TRANSFORMATION: this.router.navigate(['/transformation'], { queryParams: { sourceId: task.sourceInterface, targetId: task.targetInterface } }); break;
-      case MappingType.JSONLD: this.router.navigate(['/jsonld'], { queryParams: { sourceId: task.sourceInterface, targetId: task.targetInterface } }); break;
+    switch(task.type) {
+      case TaskType.MANUAL_MAP: this.router.navigate(['/manual'], { queryParams: { sourceId: task.sourceInterface, targetId: task.targetInterface } }); break;
+      case TaskType.TRANSFORM_MAP: this.router.navigate(['/transformation'], { queryParams: { sourceId: task.sourceInterface, targetId: task.targetInterface } }); break;
+      case TaskType.JSONLD_MAP: this.router.navigate(['/jsonld'], { queryParams: { sourceId: task.sourceInterface, targetId: task.targetInterface } }); break;
+      case TaskType.JSONLD_DESC: this.router.navigate(['/describe'], { queryParams: { selectedId: task.sourceInterface } }); break;
       default: throw new Error("Unknown mapping type");
     }
   }
