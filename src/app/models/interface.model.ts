@@ -2,6 +2,8 @@ export interface IInterface {
   id: string
   createdBy: string
   endpoint: string
+  method: "DELETE" | "GET" | "HEAD" | "JSONP" | "OPTIONS"
+  name: string
   request: {
     body: any,
     jsonLdContext: any
