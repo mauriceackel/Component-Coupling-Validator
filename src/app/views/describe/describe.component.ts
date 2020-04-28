@@ -50,8 +50,7 @@ export class DescribeComponent implements OnInit, OnDestroy {
   public reset() {
     this.router.navigate([], {
       queryParams: {
-        sourceId: null,
-        targetId: null,
+        selectedId: null,
       },
       queryParamsHandling: 'merge'
     });
