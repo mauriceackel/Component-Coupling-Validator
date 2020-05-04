@@ -45,7 +45,6 @@ export class RequestZoneComponent implements OnInit, OnChanges {
 
   public async testRequest() {
     const mapping = this.mappingService.buildMapping(this.mappingSource, this.mappingTarget, this.requestMappingPairs, this.responseMappingPairs, MappingType.AUTO);
-
     try {
       this.validationService.validateMapping(this.mappingSource, this.mappingTarget, mapping);
       this.mappingError = undefined;
@@ -53,6 +52,7 @@ export class RequestZoneComponent implements OnInit, OnChanges {
       this.outputData = await this.requestService.sendRequest(this.currentInputData, mapping, this.mappingTarget);
     } catch (err) {
       if (err instanceof ValidationError) {
+        console.log(err.message);
         this.mappingError = err;
         return;
       }
