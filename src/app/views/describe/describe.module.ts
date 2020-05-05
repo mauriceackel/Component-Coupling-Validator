@@ -13,6 +13,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { EditorZoneModule } from '~/app/components/editor-zone/editor-zone.module';
 import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
 import { DescribeComponent } from './describe.component';
+import { MatTreeModule } from '@angular/material/tree';
 
 @NgModule({
   declarations: [
@@ -30,7 +31,9 @@ import { DescribeComponent } from './describe.component';
     MatSelectModule,
     MatTabsModule,
     MatExpansionModule,
+    MatExpansionModule,
     EditorZoneModule,
+    MatTreeModule,
     JoinPipeModule,
   ],
   exports: [
