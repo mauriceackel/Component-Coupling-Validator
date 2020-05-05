@@ -88,6 +88,14 @@ export class TaskService {
 
   public abortTask() {
     if(this._taskRunning) {
+      let taskReport: ITaskReport = {
+        id: undefined,
+        createdBy: this.authService.User.uid,
+        task: this._activeTask.id,
+        time: -1
+      }
+      this.taskReportService.createTaskReport(taskReport);
+
       this._activeTask = undefined;
       this._taskRunning = false;
     }
