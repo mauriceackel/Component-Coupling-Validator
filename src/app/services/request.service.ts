@@ -18,9 +18,8 @@ export class RequestService {
     const targetInputData = jsonata(stringifyedToJsonata(mapping.requestMapping)).evaluate(sourceInputData);
 
     const response = await this.httpClient.request<any>(targetInterface.method, targetInterface.endpoint, { body: targetInputData, responseType: "json" }).toPromise();
-    const targetOutputData = response.json;
 
-    const sourceOutputData = jsonata(stringifyedToJsonata(mapping.responseMapping)).evaluate(targetOutputData);
+    const sourceOutputData = jsonata(stringifyedToJsonata(mapping.responseMapping)).evaluate(response);
 
     return sourceOutputData;
   }

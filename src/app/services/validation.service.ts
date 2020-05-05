@@ -14,7 +14,17 @@ export class ValidationService {
     const missingResponse = this.findMissing(JSON.parse(mapping.responseMapping), source.response.body);
 
     if(missingRequest.length > 0 || missingResponse.length > 0) {
-      throw new ValidationError("You have missing properties in your mapping", missingRequest, missingResponse);
+      let errorMessage=""
+      if(missingRequest.length > 0 && missingResponse.length < 1){
+        errorMessage = "ERROR: Missing request mappings "+missingRequest
+      }
+      if(missingRequest.length < 1 && missingResponse.length > 0){
+        errorMessage = "ERROR:  Missing response mappings "+missingResponse
+      }
+      if(missingRequest.length > 0 && missingResponse.length > 0){
+        errorMessage = "ERROR: Missing request mappings "+missingRequest+". Missing response mappings "+missingResponse
+      }
+      throw new ValidationError(errorMessage, missingRequest, missingResponse);
     }
   }
 
