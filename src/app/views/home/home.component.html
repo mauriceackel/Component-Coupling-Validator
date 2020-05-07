@@ -49,11 +49,11 @@
               <li>The "TRANSFORMATION" method is reusing already present mappings stored in a knowledge base</li>
               <li>The "JSONLD" method is equivalent to using a standard for describing mappings</li>
             </ul>
-          <li>The evaluation period will last from 16.04.2020 until 03.05.2020</li>
+          <li>The evaluation period will last from 04.05.2020 until 18.05.2020</li>
           <li>You may need longer for solving the tasks in the beginning. Expected for a task up to 20 minutes of workload
           </li>
-          <li>Please familiarize yourself with the different views first.Therefore, please click on the views MANUAL/TRANSOFRMATION/JSONLD and 
-            select "POST host../humans" as a Mapping Source and "GET exam.../users" as a Mapping Target</li>
+          <li>Please familiarize yourself with the different views first.Therefore, please click on the views MANUAL/TRANSOFRMATION/JSONLD and select "GET EXAMPLE1" as a Mapping Source and "GET EXAMPLE 2" as a Mapping Target</li>
+          <li>Before you can work with this tool, please open https://134.155.95.3:8083/example1 and accepted the certificate by following your browsers instructions</li>
           <li>There are several depencendies when working on the tasks listed. These are defined as follows:</li>
           <br>
           <table style="width:100%; text-align:center;" border="1">
@@ -100,20 +100,20 @@
               <th>-</th>
             </tr>
             <tr>
-              <td>JSONLD WooCommerce-Billwerk</td>
+              <td>JSONLD 1</td>
               <td>-</td>
               <td>Marius</td>
               <th>Tobias</th>
             </tr>
             <tr>
-              <td>JSONLD Billwerk-Shopify</td>
-              <td>JSONLD WooCommerce-Billwerk</td>
+              <td>JSONLD 2</td>
+              <td>-</td>
               <td>Tobias</td>
               <th>Bogdan</th>
             </tr>
             <tr>
               <td>JSONLD WooCommerce-Billwerk</td>
-              <td>JSONLD Billwerk-Shopify</td>
+              <td>JSONLD 1 and JSONLD 2</td>
               <td>Bogdan</td>
               <th>-</th>
             </tr>
@@ -144,15 +144,30 @@
             <li>JSONLD Tasks</li>
             <ul>
               <li>You may need to textually specify the mappings using the JSONLD syntax prior to using the graphical mapping view</li>
-              <li>First insert/adapte the text in the "JSONLD Editor"</li>
-              <li>For searching <a href="https://schema.org" target="_blank">schema.org</a> please use the Custom Search field</li>
-              <li>If you cannot identify a desired item within the schema.org vocabulary, you can also use <a href="http://dbpedia.org/fct/" target="_blank">DBpedia</a> by using the Entity Label Lookup</li>
+              <li>For searching, please use  <a href="http://dbpedia.org" target="_blank">DBpedia</a> by using the Entity Label Lookup</li>
               <ul><li>You can identify the URL by clicking on the "JSON-LD" Logo at the bottom of the result page and copy and paste the @id field</li></ul>
-              <li>Please "Store" the textua definitions everytime you make a change</li>
+              <li>If you cannot identify a desired item within the dbpedia.org vocabulary, you can also use any other knowledge base</li>
+              <li>If you are seeing only one interface, you have to create a new JSON-LD file</li>
+              <ul>
+                <li>Only enter the JsonLd context without the enclosing @context</li>
+                <li>Please "Store" the textual definitions everytime you make a change</li>
+                <li>You can view all attributes in the "Interface Model Values" view</li>
+              </ul>
+              <li>If you are seeing two interfaces with JSON-LD description, you can execute try executiing the request directly
+                <ul><li>You are not allowed to edit any JSON-LD deccriptions in this view</li></ul>
+              </li>
               <li>Second, continue with the "Mapping" View</li>
               <li>All information from both JSON-LD descriptions are rendered into this view automatically if they can be parsed</li>
               <li>If you cannot find a suitable URL that fits your attribute, you can map the attributes similar to the MANUAL/TRANSFORMATION tasks as well</li>
             </ul>
+          </ul>
+        </li>
+        <li>You can test your mapping at any time using the "Test Mapping" functionality 
+          <ul>
+            <li>By clicking on "Test Request" all available request mappings are applied to the "Source Request Body" and send to the "Maping Target"</li>
+            <li>Similar, all available response mappings are applied to the repsonse from the "Mapping Target" </li>
+            <li>You do not have to specify any input parameters</li>
+            <li>If your mappings are correct, then you sould see a valid response with the attrbutes of the "Source Request Body" in the "Output Data" field</li>
           </ul>
         </li>
         <li>After you have mapped all required attirbutes, you can finish your task by clicking on Finish Mapping"
