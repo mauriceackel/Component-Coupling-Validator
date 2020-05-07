@@ -52,6 +52,7 @@ export class RequestZoneComponent implements OnInit, OnChanges {
       this.outputData = await this.requestService.sendRequest(this.currentInputData, mapping, this.mappingTarget);
     } catch (err) {
       if (err instanceof ValidationError) {
+        this.outputData = {};
         this.mappingError = err;
         return;
       }
