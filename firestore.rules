@@ -1,18 +1,29 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+		match /{document=**} {
+    	allow read, write: if false;
+    }
 
     function isAuthenticated() {
-      return request.auth.uid != null
+      return request.auth.uid != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified;
+    }
+
+    function matchesAuthId(userId) {
+      return request.auth.uid == userId;
     }
 
     function isAdmin() {
-      return request.auth.uid == "l7d4BFz5NANhuEmpeiT6HyfqXct1"
+    	return request.auth.uid in get(/databases/$(database)/documents/roles/admin).data.members;
     }
 
     match /interfaces/{interfaceId} {
       // Everyone can read the interface descriptions
-      allow get, list: if isAuthenticated()
+      allow get, list: if isAuthenticated();
       allow update: if isAuthenticated() && (
       							  isAdmin() ||
       							  request.resource.data.name == resource.data.name &&
@@ -26,22 +37,22 @@ service cloud.firestore {
 
     match /mappings/{mappingId} {
       // Everyone can read the mapping descriptions
-      allow get, list: if isAuthenticated()
-      allow create: if isAdmin() || request.auth.uid == request.resource.data.createdBy
-      allow update, delete: if isAdmin() || request.auth.uid == resource.data.createdBy
+      allow get, list: if isAuthenticated();
+      allow create: if isAdmin() || matchesAuthId(request.resource.data.createdBy);
+      allow update, delete: if isAdmin() || matchesAuthId(resource.data.createdBy);
     }
 
     match /tasks/{taskId} {
       // Everyone can read the tasks
-      allow get, list: if isAuthenticated()
-      allow create: if isAdmin()
-      allow update, delete: if isAdmin()
+      allow get, list: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
     }
 
     match /task-reports/{reportId} {
       // Everyone can read the interface descriptions
-      allow get, list, update, delete: if isAdmin()
-      allow create: if isAdmin() || request.auth.uid == request.resource.data.createdBy
+      allow get, list, update, delete: if isAdmin();
+      allow create: if isAdmin() || matchesAuthId(request.resource.data.createdBy);
     }
   }
 }
