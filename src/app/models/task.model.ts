@@ -1,4 +1,3 @@
-import { MappingType } from './mapping.model';
 
 export interface ITask {
   id: string
@@ -12,6 +11,5 @@ export interface ITask {
 export enum TaskType {
   MANUAL_MAP,
   TRANSFORM_MAP,
-  JSONLD_MAP,
-  JSONLD_DESC
+  ADD_INTERFACE
 }

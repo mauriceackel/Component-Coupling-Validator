@@ -5,12 +5,10 @@ export interface IInterface {
   method: "DELETE" | "GET" | "HEAD" | "JSONP" | "OPTIONS"
   name: string
   request: {
-    body: any,
-    jsonLdContext: any
+    body: any
   }
   response: {
-    body: any,
-    jsonLdContext: any
+    body: any
   }
 }
 

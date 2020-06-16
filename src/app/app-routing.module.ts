@@ -1,12 +1,10 @@
 import { NgModule } from '@angular/core';
-import { Routes, RouterModule } from '@angular/router';
-import { LoginComponent } from './views/login/login.component';
-import { AuthenticationService, AuthGuard } from './services/authentication.service';
-import { HomeComponent } from './views/home/home.component';
-import { ManualComponent } from './views/manual/manual.component';
-import { TransformationComponent } from './views/transformation/transformation.component';
-import { JsonldComponent } from './views/jsonld/jsonld.component';
+import { RouterModule, Routes } from '@angular/router';
+import { AuthGuard } from './services/authentication.service';
 import { DescribeComponent } from './views/describe/describe.component';
+import { HomeComponent } from './views/home/home.component';
+import { LoginComponent } from './views/login/login.component';
+import { TransformationComponent } from './views/transformation/transformation.component';
 
 const routes: Routes = [
   {
@@ -14,19 +12,9 @@ const routes: Routes = [
     component: LoginComponent,
   },
   {
-    path: 'manual',
-    canActivate: [AuthGuard],
-    component: ManualComponent,
-  },
-  {
     path: 'transformation',
     canActivate: [AuthGuard],
     component: TransformationComponent,
-  },
-  {
-    path: 'jsonld',
-    canActivate: [AuthGuard],
-    component: JsonldComponent,
   },
   {
     path: 'describe',

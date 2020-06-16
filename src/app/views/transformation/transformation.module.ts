@@ -1,17 +1,18 @@
 import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
-import { MatInputModule } from '@angular/material/input';
-import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { TransformationComponent } from './transformation.component';
-import { MappingZoneModule } from '~/app/components/mapping-zone/mapping-zone.module';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatSelectModule } from '@angular/material/select';
-import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
+import { MatCardModule } from '@angular/material/card';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MappingZoneModule } from '~/app/components/mapping-zone/mapping-zone.module';
 import { RequestZoneModule } from '~/app/components/request-zone/request-zone.module';
+import { GenericDialogModule } from '~/app/utils/generic-dialog/generic-dialog.module';
+import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
+import { TransformationComponent } from './transformation.component';
 
 @NgModule({
   declarations: [
@@ -29,6 +30,7 @@ import { RequestZoneModule } from '~/app/components/request-zone/request-zone.mo
     MatSelectModule,
     JoinPipeModule,
     MatExpansionModule,
+    GenericDialogModule,
     RequestZoneModule,
   ],
   exports: [

@@ -16,8 +16,6 @@ export interface IMappingPair {
 }
 
 export enum MappingType {
-  MANUAL,
   TRANSFORMATION,
-  JSONLD,
   AUTO
 }

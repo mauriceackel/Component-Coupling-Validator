@@ -9,10 +9,9 @@
 
       <div class="col-4 d-flex justify-content-center">
         <ng-container *ngIf="identificationService.User as user">
-          <button mat-button class="mx-1" [routerLink]="['manual']" routerLinkActive="link-active">Manual</button>
           <button mat-button class="mx-1" [routerLink]="['transformation']"
             routerLinkActive="link-active">Transformation</button>
-          <button mat-button class="mx-1" [routerLink]="['jsonld']" routerLinkActive="link-active">JsonLD</button>
+          <button mat-button class="mx-1" [routerLink]="['describe']" routerLinkActive="link-active">Add Interface</button>
         </ng-container>
       </div>
 

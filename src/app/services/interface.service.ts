@@ -31,12 +31,10 @@ export class InterfaceService {
       ...iface,
       id,
       request: {
-        body: iface.request.body && JSON.parse(iface.request.body),
-        jsonLdContext: iface.request.jsonLdContext && JSON.parse(iface.request.jsonLdContext)
+        body: iface.request.body && JSON.parse(iface.request.body)
       },
       response: {
-        body: iface.response.body && JSON.parse(iface.response.body),
-        jsonLdContext: iface.response.jsonLdContext && JSON.parse(iface.response.jsonLdContext)
+        body: iface.response.body && JSON.parse(iface.response.body)
       }
     }
   }
@@ -47,11 +45,9 @@ export class InterfaceService {
       id: undefined,
       request: {
         body: iface.request.body && JSON.stringify(iface.request.body),
-        jsonLdContext: iface.request.jsonLdContext && JSON.stringify(iface.request.jsonLdContext)
       },
       response: {
         body: iface.response.body && JSON.stringify(iface.response.body),
-        jsonLdContext: iface.response.jsonLdContext && JSON.stringify(iface.response.jsonLdContext)
       }
     }
     result = removeUndefined(result);
