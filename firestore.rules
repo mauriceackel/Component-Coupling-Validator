@@ -35,6 +35,13 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
     }
 
+    match /apis/{interfaceId} {
+      // Everyone can read the interface descriptions
+      allow get, list: if isAuthenticated();
+      allow create: if isAdmin() || matchesAuthId(request.resource.data.createdBy);
+      allow update, delete: if isAdmin() || matchesAuthId(resource.data.createdBy);
+    }
+
     match /mappings/{mappingId} {
       // Everyone can read the mapping descriptions
       allow get, list: if isAuthenticated();
