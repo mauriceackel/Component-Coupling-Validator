@@ -1,16 +1,20 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { IInterface } from '~/app/models/interface.model';
-import { FormControl, Validators } from '@angular/forms';
-import { InterfaceService } from '~/app/services/interface.service';
-import { merge } from 'rxjs';
-import { MappingService } from '~/app/services/mapping.service';
-import { MatDialogRef, MatDialog } from '@angular/material/dialog';
-import { GenericDialog, ButtonType } from '~/app/utils/generic-dialog/generic-dialog.component';
-import { ValidationError } from '~/app/utils/errors/validation-error';
-import { IMappingPair, MappingType } from '~/app/models/mapping.model';
-import { ValidationService } from '~/app/services/validation.service';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatExpansionPanel } from '@angular/material/expansion';
 import { ActivatedRoute, Router } from '@angular/router';
+import { merge, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
+import { IApi } from '~/app/models/api.model';
+import { IInterface } from '~/app/models/interface.model';
+import { IMappingPair, MappingType } from '~/app/models/mapping.model';
+import { ApiService } from '~/app/services/api.service';
+import { MappingService } from '~/app/services/mapping.service';
 import { TaskService } from '~/app/services/task.service';
+import { ValidationService } from '~/app/services/validation.service';
+import { ValidationError } from '~/app/utils/errors/validation-error';
+import { ButtonType, GenericDialog } from '~/app/utils/generic-dialog/generic-dialog.component';
+import { getBodySchema, getOperationTemplates, getResponseSchema, IOperationTemplate } from '~/app/utils/swagger-parser';
 
 @Component({
   selector: 'app-transformation',
@@ -19,18 +23,39 @@ import { TaskService } from '~/app/services/task.service';
 })
 export class TransformationComponent implements OnInit, OnDestroy {
 
-  public interfaces: Array<IInterface>;
+  public apis: Array<IApi>;
 
-  public mappingSource: FormControl;
-  public mappingTarget: FormControl;
+  public inputForm = new FormGroup({
+    'mS': new FormControl(undefined, Validators.required),
+    'mSO': new FormControl(undefined, Validators.required),
+    'mSR': new FormControl(undefined, Validators.required),
+    'mT': new FormControl(undefined, Validators.required),
+    'mTO': new FormControl(undefined, Validators.required),
+    'mTR': new FormControl(undefined, Validators.required),
+  });
+
+  public mappingSource: IInterface;
+  public mappingTarget: IInterface;
+
+  public sourceOperations: Array<IOperationTemplate>;
+  public targetOperations: Array<IOperationTemplate>;
+
+  public sourceRequestBody: any;
+  public sourceResponseBody: any;
+  public targetRequestBody: any;
+  public targetResponseBody: any;
 
   public requestMappingPairs: Array<IMappingPair>;
   public responseMappingPairs: Array<IMappingPair>;
 
   public mappingError: ValidationError;
 
+  private subscriptions = new Array<Subscription>();
+
+  @ViewChild(MatExpansionPanel) testRequest: MatExpansionPanel;
+
   constructor(
-    private interfaceService: InterfaceService,
+    private apiService: ApiService,
     private mappingService: MappingService,
     private validationService: ValidationService,
     private dialog: MatDialog,
@@ -40,39 +65,89 @@ export class TransformationComponent implements OnInit, OnDestroy {
   ) { }
 
   public async ngOnInit() {
-    this.mappingSource = new FormControl(undefined, Validators.required);
-    this.mappingTarget = new FormControl(undefined, Validators.required);
-
     this.requestMappingPairs = new Array<IMappingPair>();
     this.responseMappingPairs = new Array<IMappingPair>();
 
-    this.interfaces = await this.interfaceService.getInterfaces();
+    this.mappingSource = undefined;
+    this.mappingTarget = undefined;
 
-    const dualObserver = merge(this.mappingSource.valueChanges, this.mappingTarget.valueChanges);
-    dualObserver.subscribe(() => this.initializeMapping());
+    this.sourceOperations = [];
+    this.targetOperations = [];
 
-    this.activatedRoute.queryParams.subscribe(params => {
-      this.mappingSource.setValue(this.interfaces.find(i => i.id === params["sourceId"]));
-      this.mappingTarget.setValue(this.interfaces.find(i => i.id === params["targetId"]));
-    });
+    this.sourceRequestBody = undefined;
+    this.sourceResponseBody = undefined;
+    this.targetRequestBody = undefined;
+    this.targetResponseBody = undefined;
+
+    this.apis = await this.apiService.getApis();
+
+    this.subscriptions.push(this.inputForm.valueChanges.subscribe(() => this.initializeMapping()));
+
+    const sourceChanges = merge(this.inputForm.get('mS').valueChanges, this.inputForm.get('mSO').valueChanges, this.inputForm.get('mSR').valueChanges).pipe(debounceTime(0));
+    this.subscriptions.push(sourceChanges.subscribe(async () => {
+      const source = this.parseSource();
+      this.mappingSource = source;
+      if (source) {
+        this.sourceRequestBody = await getBodySchema(source.api, { operationId: source.operationId, responseId: source.responseId });
+        this.sourceResponseBody = await getResponseSchema(source.api, { operationId: source.operationId, responseId: source.responseId });
+      }
+    }));
+    this.subscriptions.push(this.inputForm.get('mS').valueChanges.subscribe(async (val: IApi) => this.sourceOperations = val && await getOperationTemplates(val)));
+
+    const targetChanges = merge(this.inputForm.get('mT').valueChanges, this.inputForm.get('mTO').valueChanges, this.inputForm.get('mTR').valueChanges).pipe(debounceTime(0));
+    this.subscriptions.push(targetChanges.subscribe(async () => {
+      const target = this.parseTarget();
+      this.mappingTarget = target;
+      if (target) {
+        this.targetRequestBody = await getBodySchema(target.api, { operationId: target.operationId, responseId: target.responseId });
+        this.targetResponseBody = await getResponseSchema(target.api, { operationId: target.operationId, responseId: target.responseId });
+      }
+    }))
+    this.subscriptions.push(this.inputForm.get('mT').valueChanges.subscribe(async (val: IApi) => this.targetOperations = val && await getOperationTemplates(val)));
+
+    this.subscriptions.push(this.activatedRoute.queryParams.subscribe(params => {
+      this.inputForm.get('mS').setValue(this.apis.find(i => i.id === params["sourceId"]));
+      this.inputForm.get('mT').setValue(this.apis.find(i => i.id === params["targetId"]));
+    }));
   }
 
   public ngOnDestroy() {
     this.taskService.pauseTask();
+    this.subscriptions.forEach(s => s.unsubscribe());
+  }
+
+  private parseSource(): IInterface {
+    if (!(this.inputForm.get('mS').valid && this.inputForm.get('mSO').valid && this.inputForm.get('mSR').valid)) return undefined;
+
+    const data = this.inputForm.value;
+    return {
+      api: data.mS,
+      operationId: data.mSO.operationId,
+      responseId: data.mSR
+    }
+  }
+
+  private parseTarget(): IInterface {
+    if (!(this.inputForm.get('mT').valid && this.inputForm.get('mTO').valid && this.inputForm.get('mTR').valid)) return undefined;
+
+    const data = this.inputForm.value;
+    return {
+      api: data.mT,
+      operationId: data.mTO.operationId,
+      responseId: data.mTR
+    }
   }
 
   private async initializeMapping() {
-    const source = this.mappingSource.value as IInterface;
-    const target = this.mappingTarget.value as IInterface;
-    if (source && target) {
-      const { request, response } = await this.mappingService.buildMappingPairs(source, target);
+    if (!this.inputForm.valid) return;
 
-      this.requestMappingPairs.splice(0);
-      this.requestMappingPairs.push(...request);
+    const { request, response } = await this.mappingService.buildMappingPairs(this.parseSource(), this.parseTarget());
 
-      this.responseMappingPairs.splice(0);
-      this.responseMappingPairs.push(...response);
-    }
+    this.requestMappingPairs.splice(0);
+    this.requestMappingPairs.push(...request);
+
+    this.responseMappingPairs.splice(0);
+    this.responseMappingPairs.push(...response);
   }
 
   public reset() {
@@ -84,19 +159,27 @@ export class TransformationComponent implements OnInit, OnDestroy {
       queryParamsHandling: 'merge'
     });
     this.taskService.abortTask();
+    this.testRequest.close();
+    this.inputForm.reset();
     this.ngOnInit();
   }
 
   public async finishMapping() {
-    const mapping = this.mappingService.buildMapping(this.mappingSource.value, this.mappingTarget.value, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
-
     try {
-      this.validationService.validateMapping(this.mappingSource.value, this.mappingTarget.value, mapping);
+      if ([...this.requestMappingPairs, ...this.responseMappingPairs].some(mp => !mp.mappingCode)) {
+        throw new ValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")
+      }
+
+      const source = this.parseSource();
+      const target = this.parseTarget();
+      const mapping = this.mappingService.buildMapping(source, target, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
+
+      await this.validationService.validateMapping(source, target, mapping);
 
       this.mappingError = undefined;
       await this.mappingService.createMapping(mapping);
 
-      if(this.taskService.TaskRunning) {
+      if (this.taskService.TaskRunning) {
         this.taskService.finishTask();
         this.showTaskSuccessDialog();
       } else {

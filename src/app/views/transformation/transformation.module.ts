@@ -11,6 +11,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MappingZoneModule } from '~/app/components/mapping-zone/mapping-zone.module';
 import { RequestZoneModule } from '~/app/components/request-zone/request-zone.module';
 import { GenericDialogModule } from '~/app/utils/generic-dialog/generic-dialog.module';
+import { FilterPipeModule } from '~/app/utils/pipes/filter.pipe';
 import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
 import { TransformationComponent } from './transformation.component';
 
@@ -32,6 +33,7 @@ import { TransformationComponent } from './transformation.component';
     MatExpansionModule,
     GenericDialogModule,
     RequestZoneModule,
+    FilterPipeModule
   ],
   exports: [
     TransformationComponent
