@@ -1,13 +1,12 @@
 import { Injectable } from "@angular/core";
-import { IMapping, IMappingPair, MappingType } from '../models/mapping.model';
-import { IInterface } from '../models/interface.model';
-import * as merge from 'deepmerge';
-import * as jsonata from 'jsonata';
-import { KeyChain } from './jsontree.service';
-import { AuthenticationService } from './authentication.service';
 import { AngularFirestore } from '@angular/fire/firestore';
 import { AngularFirestoreCollection } from '@angular/fire/firestore/public_api';
+import { flatten, unflatten } from 'flat';
+import { IInterface } from '../models/interface.model';
+import { IMapping, IMappingPair, MappingType } from '../models/mapping.model';
+import * as getinputs from '../utils/get-inputs/get-inputs';
 import { removeUndefined } from '../utils/remove-undefined';
+import { AuthenticationService } from './authentication.service';
 
 @Injectable({
   providedIn: 'root'
@@ -103,7 +102,7 @@ export class MappingService {
       //Get the last element from tht path. This is our mapping we need to check.
       const mapping = path[path.length - 1]
 
-      if (mapping.targetId === targetId) {
+      if (mapping.targetId === targetId && path.length > 1) {
         //Return the path, while removing dummy element
         return path.slice(1);
       }
@@ -136,8 +135,8 @@ export class MappingService {
       id: undefined,
       createdBy: this.identificationService.User.uid,
       type: type,
-      sourceId: source.id,
-      targetId: target.id,
+      sourceId: `${source.api.id}.${source.operationId}.${source.responseId}`,
+      targetId: `${target.api.id}.${target.operationId}.${target.responseId}`,
       requestMapping: JSON.stringify(requestTransformation),
       responseMapping: JSON.stringify(responseTransformation)
     }
@@ -148,29 +147,10 @@ export class MappingService {
    * @param mappingPairs A list of mapping pairs that will build the transformation
    */
   private mappingPairsToTrans(mappingPairs: Array<IMappingPair>, direction: MappingDirection) {
-    return merge.all(mappingPairs.map(p => {
-      let required: KeyChain;
-      let provided: KeyChain;
-      switch (direction) {
-        //If we are mapping an input, we need to map values from the source to the target, hence we use target as required
-        case MappingDirection.INPUT: {
-          required = p.target;
-          provided = p.source;
-        }; break;
-        //If we are mapping an output, we need to map values from the target to the source, hence we use source as required
-        case MappingDirection.OUTPUT: {
-          required = p.source;
-          provided = p.target;
-        }; break;
-        default: throw new Error("Unknown mapping direction");
-      }
-
-      return required.reduceRight((child: any, curr: string) => {
-        let obj: any = {};
-        obj[curr] = child;
-        return obj;
-      }, provided.join('.'));
-    }));
+    return unflatten(mappingPairs.reduce((obj, p) => {
+      obj[p.required.join('.')] = p.mappingCode;
+      return obj;
+    }, {}));
   }
 
   /**
@@ -179,7 +159,7 @@ export class MappingService {
    * @param target The target interface
    */
   public async buildMappingPairs(source: IInterface, target: IInterface): Promise<{ request: Array<IMappingPair>, response: Array<IMappingPair> }> {
-    const mappingChain = await this.findMappingChain(source.id, target.id);
+    const mappingChain = await this.findMappingChain(`${source.api.id}.${source.operationId}.${source.responseId}`, `${target.api.id}.${target.operationId}.${target.responseId}`);
 
     if (!mappingChain || mappingChain.length === 0) return { request: [], response: [] }
 
@@ -202,23 +182,12 @@ export class MappingService {
       if (typeof transformation[key] === "object" && !(transformation[key] instanceof Array)) {
         result.push(...this.transToMappingPairs(transformation[key], direction, [...keyChain, key]));
       } else {
-        let pair: IMappingPair;
-        switch (direction) {
-          //If we are mapping an input, we need to map values from the source to the target, hence the values are the keys of the source
-          case MappingDirection.INPUT: {
-            pair = {
-              source: transformation[key].split('.'),
-              target: [...keyChain, key],
-            }
-          }; break;
-          //If we are mapping an output, we need to map values from the target to the source, hence the values are the key of the target
-          case MappingDirection.OUTPUT: {
-            pair = {
-              source: [...keyChain, key],
-              target: transformation[key].split('.'),
-            }
-          }; break;
-          default: throw new Error("Unknown mapping direction");
+        const inputs = getinputs(`{"${key}": ${transformation[key]}}`).getInputs({});
+        const uniqueInputs = inputs.filter((k, i) => inputs.lastIndexOf(k) === i);
+        const pair: IMappingPair = {
+          provided: uniqueInputs.map(k => k.split('.')),
+          required: [...keyChain, key],
+          mappingCode: transformation[key]
         }
         result.push(pair);
       }
@@ -232,17 +201,31 @@ export class MappingService {
    * @param mappingChain The transitive chain of mappings
    */
   private executeMappingChain(mappingChain: Array<IMapping>): IMapping {
+    const operators = ['=', '!', '+', '-', '*', '/', '>', '<', ' and ', ' or ', ' in ', '&', '%'];
+
     const [requestInput, ...requestChain] = new Array(...mappingChain);
 
     const responseChain = new Array(...mappingChain);
     const responseInput = responseChain.pop();
 
     const requestMapping = requestChain.reduce((input, mapping) => {
-      return jsonata(stringifyedToJsonata(mapping.requestMapping)).evaluate(input);
+      const flatInput = flatten(input);
+      const inputKeys = Object.keys(flatInput);
+      const m: { [key: string]: string } = flatten(JSON.parse(mapping.requestMapping));
+      for (const [key, value] of Object.entries(m)) {
+        m[key] = inputKeys.reduce((val, k) => val.replace(new RegExp(k, 'g'), operators.some(o => flatInput[k].includes(o)) ? `(${flatInput[k]})` : flatInput[k]), value);
+      }
+      return unflatten(m);
     }, JSON.parse(requestInput.requestMapping));
 
     const responseMapping = responseChain.reduceRight((input, mapping) => {
-      return jsonata(stringifyedToJsonata(mapping.responseMapping)).evaluate(input);
+      const flatInput = flatten(input);
+      const inputKeys = Object.keys(flatInput);
+      const m: { [key: string]: string } = flatten(JSON.parse(mapping.responseMapping));
+      for (const [key, value] of Object.entries(m)) {
+        m[key] = inputKeys.reduce((val, k) => val.replace(new RegExp(k, 'g'), operators.some(o => flatInput[k].includes(o)) ? `(${flatInput[k]})` : flatInput[k]), value);
+      }
+      return unflatten(m);
     }, JSON.parse(responseInput.responseMapping));
 
     return {

@@ -1,9 +1,11 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from "@angular/core";
+import * as jsonata from 'jsonata';
 import { IInterface } from '../models/interface.model';
 import { IMapping } from '../models/mapping.model';
+import { getRequestUrl } from '../utils/swagger-parser';
+import { ApiService } from './api.service';
 import { stringifyedToJsonata } from './mapping.service';
-import { HttpClient } from '@angular/common/http';
-import * as jsonata from 'jsonata';
 
 
 @Injectable({
@@ -11,13 +13,15 @@ import * as jsonata from 'jsonata';
 })
 export class RequestService {
 
-  constructor(private httpClient: HttpClient) { }
+  constructor(private httpClient: HttpClient, private apiService: ApiService) { }
 
   public async sendRequest(sourceInputData: any, mapping: IMapping, targetInterface: IInterface) {
 
     const targetInputData = jsonata(stringifyedToJsonata(mapping.requestMapping)).evaluate(sourceInputData);
 
-    const response = await this.httpClient.request<any>(targetInterface.method, targetInterface.endpoint, { body: targetInputData, responseType: "json" }).toPromise();
+    const { method, url } = await getRequestUrl(targetInterface);
+
+    const response = await this.httpClient.request<any>(method, url, { body: targetInputData, responseType: "json" }).toPromise();
 
     const sourceOutputData = jsonata(stringifyedToJsonata(mapping.responseMapping)).evaluate(response);
 
