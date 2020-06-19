@@ -1,10 +1,11 @@
-import { Component, OnInit, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
-import { RequestService } from '~/app/services/request.service';
+import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { IInterface } from '~/app/models/interface.model';
+import { IMappingPair, MappingType } from '~/app/models/mapping.model';
 import { MappingService } from '~/app/services/mapping.service';
+import { RequestService } from '~/app/services/request.service';
 import { ValidationService } from '~/app/services/validation.service';
 import { ValidationError } from '~/app/utils/errors/validation-error';
-import { IInterface } from '~/app/models/interface.model';
-import { MappingType, IMappingPair } from '~/app/models/mapping.model';
+import { getRequestUrl } from '~/app/utils/swagger-parser';
 
 @Component({
   selector: 'app-request-zone',
@@ -18,6 +19,8 @@ export class RequestZoneComponent implements OnInit, OnChanges {
   @Input("inputData") public inputData: any;
   public currentInputData: any;
   public outputData: any;
+  public server: string;
+  public method: string;
 
   @Input("mappingSource") public mappingSource: IInterface;
   @Input("mappingTarget") public mappingTarget: IInterface;
@@ -36,9 +39,16 @@ export class RequestZoneComponent implements OnInit, OnChanges {
   public ngOnInit() {
   }
 
-  public ngOnChanges(changes: SimpleChanges) {
+  public async ngOnChanges(changes: SimpleChanges) {
     if (changes.inputData) {
       this.currentInputData = this.inputData;
+    }
+    if (changes.mappingTarget) {
+      if(this.mappingTarget) {
+        const {method, url} = await getRequestUrl(this.mappingTarget);
+        this.server = url;
+        this.method = method;
+      }
     }
     this.ngOnInit();
   }
@@ -46,7 +56,7 @@ export class RequestZoneComponent implements OnInit, OnChanges {
   public async testRequest() {
     const mapping = this.mappingService.buildMapping(this.mappingSource, this.mappingTarget, this.requestMappingPairs, this.responseMappingPairs, MappingType.AUTO);
     try {
-      this.validationService.validateMapping(this.mappingSource, this.mappingTarget, mapping);
+      await this.validationService.validateMapping(this.mappingSource, this.mappingTarget, mapping);
       this.mappingError = undefined;
 
       this.outputData = await this.requestService.sendRequest(this.currentInputData, mapping, this.mappingTarget);
