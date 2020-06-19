@@ -31,6 +31,10 @@
   justify-content: center;
 }
 
+.invalid {
+  background-color: red !important;
+}
+
 .remove-icon {
   cursor: pointer;
   position: absolute;

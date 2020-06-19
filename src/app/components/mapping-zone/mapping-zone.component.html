@@ -11,7 +11,7 @@
         </div>
         <div class="col">
           <button mat-stroked-button color="primary" class="float-right btn-narrow" (click)="mapSelected()"
-            [disabled]="!(selectedLeft && selectedRight)">Map selected</button>
+            [disabled]="isRequest && selectedRight.length === 0 || !isRequest && selectedLeft.length === 0">Map selected</button>
         </div>
       </div>
     </div>
@@ -26,8 +26,8 @@
         <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
           <li class="mat-tree-node">
             <mat-icon></mat-icon>
-            <button mat-button [ngClass]="{'mat-accent': selectedLeft==node}" (click)="selectedLeft=node"
-              [disabled]="!isRequest && isMapped(node, true)">{{node.name}}</button>
+            <button mat-button [ngClass]="{'mat-accent': selectedLeft.includes(node)}" (click)="selectLeft(node)"
+              [disabled]="!isRequest && isMapped(node)">{{node.name}}</button>
           </li>
         </mat-tree-node>
         <!-- Expandable nodes -->
@@ -48,17 +48,19 @@
     </div>
     <div class="col-6">
       <div class="mapping-container">
-        <div class="mapping-pair m-2" *ngFor="let pair of mappingPairs">
+        <div (click)="openEditor(pair)" class="cursor-pointer mapping-pair m-2" [ngClass]="{'invalid': !pair.mappingCode}" *ngFor="let pair of mappingPairs">
           <mat-icon class="remove-icon" (click)="removePair(pair)">
             remove_circle_outline
           </mat-icon>
 
-          <div class="mr-1">
-            {{pair.source | join:'.'}}
+          <div class="d-flex flex-column mr-1">
+            <div *ngFor="let p of pair.provided">
+              {{p | join:'.'}}
+            </div>
           </div>
-          <mat-icon>sync_alt</mat-icon>
+          <mat-icon>arrow_right_alt</mat-icon>
           <div class="ml-1">
-            {{pair.target | join:'.'}}
+            {{pair.required | join:'.'}}
           </div>
         </div>
       </div>
@@ -69,8 +71,8 @@
         <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
           <li class="mat-tree-node">
             <mat-icon></mat-icon>
-            <button mat-button [ngClass]="{'mat-accent': selectedRight==node}" (click)="selectedRight=node"
-              [disabled]="isRequest && isMapped(node, false)">{{node.name}}</button>
+            <button mat-button [ngClass]="{'mat-accent': selectedRight.includes(node)}" (click)="selectRight(node)"
+              [disabled]="isRequest && isMapped(node)">{{node.name}}</button>
           </li>
         </mat-tree-node>
         <!-- Expandable nodes -->

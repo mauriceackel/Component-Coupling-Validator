@@ -1,9 +1,11 @@
-import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { NestedTreeControl } from '@angular/cdk/tree';
-import { JsonTreeService, JsonTreeNode } from '../../services/jsontree.service';
+import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { IMappingPair } from '~/app/models/mapping.model';
 import { arrayEquals } from '~/app/utils/array-utils';
+import { JsonTreeNode, JsonTreeService } from '../../services/jsontree.service';
+import { TransformationDialog } from '../transformation-dialog/transformation-dialog.component';
 
 @Component({
   selector: 'app-mapping-zone',
@@ -28,11 +30,13 @@ export class MappingZoneComponent implements OnInit, OnChanges {
   public rightTreeControl = new NestedTreeControl<JsonTreeNode>(node => node.children);
   public rightDataSource = new MatTreeNestedDataSource<JsonTreeNode>();
 
-  public selectedLeft: JsonTreeNode;
-  public selectedRight: JsonTreeNode;
+  public selectedLeft = new Array<JsonTreeNode>();
+  public selectedRight = new Array<JsonTreeNode>();
 
-  constructor(private jsonTreeService: JsonTreeService) {
-  }
+  constructor(
+    private jsonTreeService: JsonTreeService,
+    private dialog: MatDialog
+  ) { }
 
   public ngOnInit() {
     if (this.mappingPairs instanceof Array) {
@@ -43,11 +47,11 @@ export class MappingZoneComponent implements OnInit, OnChanges {
 
     this.leftDataSource.data = this.jsonTreeService.toTree(this.leftData);
     this.leftTreeControl.dataNodes = this.leftDataSource.data;
-    if(this.leftDataSource.data.length !== 0) this.leftTreeControl.expandAll();
+    if (this.leftDataSource.data.length !== 0) this.leftTreeControl.expandAll();
 
     this.rightDataSource.data = this.jsonTreeService.toTree(this.rightData);
     this.rightTreeControl.dataNodes = this.rightDataSource.data;
-    if(this.rightDataSource.data.length !== 0) this.rightTreeControl.expandAll();
+    if (this.rightDataSource.data.length !== 0) this.rightTreeControl.expandAll();
 
   }
 
@@ -56,11 +60,59 @@ export class MappingZoneComponent implements OnInit, OnChanges {
   }
 
   public mapSelected() {
-    this.mappingPairs.push({
-      source: this.selectedLeft.keyChain,
-      target: this.selectedRight.keyChain
+    if (this.isRequest) {
+      this.mappingPairs.push({
+        provided: this.selectedLeft.map(n => n.keyChain),
+        required: this.selectedRight[0].keyChain,
+        mappingCode: this.selectedLeft.length === 1 ? this.selectedLeft[0].keyChain.join('.') : "",
+      });
+    } else {
+      this.mappingPairs.push({
+        provided: this.selectedRight.map(n => n.keyChain),
+        required: this.selectedLeft[0].keyChain,
+        mappingCode: this.selectedRight.length === 1 ? this.selectedRight[0].keyChain.join('.') : "",
+      });
+    }
+    this.selectedLeft = new Array<JsonTreeNode>();
+    this.selectedRight = new Array<JsonTreeNode>();
+  }
+
+  public openEditor(mappingPair: IMappingPair) {
+    const dialogRef: MatDialogRef<TransformationDialog, string> = this.dialog.open(TransformationDialog, {
+      position: {
+        top: "5%",
+        bottom: "5%",
+      },
+      width: "80%",
+      data: {
+        mappingCode: mappingPair.mappingCode,
+        keys: mappingPair.provided
+      }
     });
-    this.selectedLeft = this.selectedRight = undefined;
+
+    dialogRef.afterClosed().subscribe((mappingCode) => {
+      if(mappingCode !== undefined) {
+        mappingPair.mappingCode = mappingCode;
+      }
+    });
+  }
+
+  public selectLeft(node: JsonTreeNode) {
+    const index = this.selectedLeft.indexOf(node);
+    if (index >= 0) {
+      this.selectedLeft.splice(index, 1);
+    } else if (this.isRequest || this.selectedLeft.length < 1) {
+      this.selectedLeft.push(node);
+    }
+  }
+
+  public selectRight(node: JsonTreeNode) {
+    const index = this.selectedRight.indexOf(node);
+    if (index >= 0) {
+      this.selectedRight.splice(index, 1);
+    } else if (!this.isRequest || this.selectedRight.length < 1) {
+      this.selectedRight.push(node);
+    }
   }
 
   public removePair(pair: IMappingPair) {
@@ -68,8 +120,8 @@ export class MappingZoneComponent implements OnInit, OnChanges {
     if (idx >= 0) this.mappingPairs.splice(idx, 1);
   }
 
-  public isMapped(node: JsonTreeNode, source: boolean) {
-    return this.mappingPairs.some(e => (source && arrayEquals(e.source, node.keyChain)) || (!source && arrayEquals(e.target, node.keyChain)));
+  public isMapped(node: JsonTreeNode) {
+    return this.mappingPairs.some(p => arrayEquals(p.required, node.keyChain));
   }
 
   public hasChild = (_: number, node: JsonTreeNode) => !!node.children && node.children.length > 0;
