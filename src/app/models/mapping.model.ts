@@ -11,8 +11,9 @@ export interface IMapping {
 }
 
 export interface IMappingPair {
-  source: KeyChain
-  target: KeyChain
+  provided: KeyChain[]
+  required: KeyChain
+  mappingCode: string
 }
 
 export enum MappingType {
