@@ -1,15 +1,15 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { IInterface } from '~/app/models/interface.model';
-import { FormControl, Validators } from '@angular/forms';
-import { InterfaceService } from '~/app/services/interface.service';
-import { ActivatedRoute, Router } from '@angular/router';
-import { TaskService } from '~/app/services/task.service';
-import { MatDialogRef, MatDialog } from '@angular/material/dialog';
-import { GenericDialog, ButtonType } from '~/app/utils/generic-dialog/generic-dialog.component';
-import { Subscription } from 'rxjs';
 import { NestedTreeControl } from '@angular/cdk/tree';
-import { JsonTreeNode, JsonTreeService } from '~/app/services/jsontree.service';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormControl, Validators } from '@angular/forms';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { IApi } from '~/app/models/api.model';
+import { ApiService } from '~/app/services/api.service';
+import { AuthenticationService } from '~/app/services/authentication.service';
+import { JsonTreeNode } from '~/app/services/jsontree.service';
+import { ButtonType, GenericDialog } from '~/app/utils/generic-dialog/generic-dialog.component';
 
 @Component({
   selector: 'app-describe',
@@ -18,9 +18,9 @@ import { MatTreeNestedDataSource } from '@angular/material/tree';
 })
 export class DescribeComponent implements OnInit, OnDestroy {
 
-  public interfaces: Array<IInterface>;
+  public apis: Array<IApi>;
 
-  public selectedInterface: FormControl;
+  public selectedApi: FormControl;
   public selectionSubscription: Subscription;
 
   public leftTreeControl = new NestedTreeControl<JsonTreeNode>(node => node.children);
@@ -30,46 +30,53 @@ export class DescribeComponent implements OnInit, OnDestroy {
   public rightDataSource = new MatTreeNestedDataSource<JsonTreeNode>();
 
   constructor(
-    private interfaceService: InterfaceService,
+    private apiService: ApiService,
     private dialog: MatDialog,
     private activatedRoute: ActivatedRoute,
-    private taskService: TaskService,
-    private jsonTreeService: JsonTreeService,
-    private router: Router
+    private router: Router,
+    private identificationService: AuthenticationService
   ) { }
 
   public async ngOnInit() {
-    this.selectedInterface = new FormControl(undefined, Validators.required);
-    this.selectedInterface.valueChanges.subscribe((newVal: IInterface) => {
-      if(newVal === undefined) return;
+    this.selectedApi = new FormControl(undefined, Validators.required);
+    this.selectionSubscription = this.selectedApi.valueChanges.subscribe((newVal: IApi) => {
+      if (newVal === undefined) return;
 
-      this.leftDataSource.data = this.jsonTreeService.toTree(newVal.request.body);
-      this.leftTreeControl.dataNodes = this.leftDataSource.data;
-      if (this.leftDataSource.data.length !== 0) this.leftTreeControl.expandAll();
+      if (newVal === null) {
+        //TODO: Make better
+        const newApi: IApi = {
+          name: "",
+          metadata: {},
+          id: undefined,
+          createdBy: this.identificationService.User.uid,
+          openApiSpec: ""
+        };
 
-      this.rightDataSource.data = this.jsonTreeService.toTree(newVal.response.body);
-      this.rightTreeControl.dataNodes = this.rightDataSource.data;
-      if (this.rightDataSource.data.length !== 0) this.rightTreeControl.expandAll();
-    })
+        this.apis.push(newApi);
+        this.selectedApi.setValue(newApi);
+      }
+    });
 
-    this.interfaces = await this.interfaceService.getInterfaces();
+    this.apis = await this.apiService.getApis();
 
     this.activatedRoute.queryParams.subscribe(params => {
-      this.selectedInterface.setValue(this.interfaces.find(i => i.id === params["selectedId"]));
+      this.selectedApi.setValue(this.apis.find(i => i.id === params["selectedId"]));
     });
   }
 
   public async ngOnDestroy() {
-    this.selectionSubscription.unsubscribe();
-    this.taskService.pauseTask();
+    this.selectionSubscription?.unsubscribe();
   }
 
   public hasChild = (_: number, node: JsonTreeNode) => !!node.children && node.children.length > 0;
 
-  public save(jsonLdContext: any, iface: IInterface, ref: { jsonLdContext: any }) {
-    if (iface) {
-      ref.jsonLdContext = jsonLdContext;
-      this.interfaceService.updateInterface(iface);
+  public handleFileInput(files: FileList) {
+    if (files[0]) {
+      const fileReader = new FileReader();
+      fileReader.onload = (e) => {
+        this.selectedApi.value.openApiSpec = JSON.parse(fileReader.result as string)
+      }
+      fileReader.readAsText(files[0]);
     }
   }
 
@@ -80,17 +87,30 @@ export class DescribeComponent implements OnInit, OnDestroy {
       },
       queryParamsHandling: 'merge'
     });
-    this.taskService.abortTask();
     this.ngOnInit();
   }
 
   public async finish() {
-    if (this.taskService.TaskRunning) {
-      this.taskService.finishTask();
-      this.showTaskSuccessDialog();
-    } else {
+    const data: IApi = this.selectedApi.value;
+    if (data.name && data.openApiSpec) {
+      await this.apiService.updateApi(this.selectedApi.value);
       this.showSuccessDialog();
+    } else {
+      this.showErrorDialog();
     }
+  }
+
+  private showErrorDialog() {
+    const dialogRef: MatDialogRef<GenericDialog, void> = this.dialog.open(GenericDialog, {
+      position: {
+        top: "5%"
+      },
+      data: {
+        title: "Error",
+        content: "Please enter all required information.",
+        buttons: [ButtonType.OK]
+      }
+    });
   }
 
   private showSuccessDialog() {
@@ -99,31 +119,14 @@ export class DescribeComponent implements OnInit, OnDestroy {
         top: "5%"
       },
       data: {
-        title: "Mapping Success",
-        content: "The mapping was successsfully created.",
+        title: "Success",
+        content: "The api was successfully edited.",
         buttons: [ButtonType.OK]
       }
     });
 
     dialogRef.afterClosed().subscribe(() => {
       this.reset();
-    });
-  }
-
-  private showTaskSuccessDialog() {
-    const dialogRef: MatDialogRef<GenericDialog, void> = this.dialog.open(GenericDialog, {
-      position: {
-        top: "5%"
-      },
-      data: {
-        title: "Task Finished",
-        content: "The task was finished successfully.",
-        buttons: [ButtonType.OK]
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(() => {
-      this.router.navigate(["/home"])
     });
   }
 

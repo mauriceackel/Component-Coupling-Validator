@@ -2,97 +2,69 @@
   <div class="row">
     <div class="col d-flex">
       <mat-form-field appearance="outline" class="flex-grow-1">
-        <mat-label>Interface</mat-label>
-        <mat-select [disabled]="selectedInterface.valid" [formControl]="selectedInterface">
-          <mat-option *ngFor="let interface of interfaces" [value]="interface">
-            {{interface.name}}
+        <mat-label>Edit API</mat-label>
+        <mat-select [disabled]="selectedApi.valid" [formControl]="selectedApi" (openedChange)="search.value=''">
+          <div class="d-flex align-items-center">
+            <mat-icon class="ml-3">
+              search
+            </mat-icon>
+            <input #search matInput class="p-3" placeholder="Search..." />
+          </div>
+          <mat-option [value]="null">Add new API +</mat-option>
+          <mat-option *ngFor="let api of apis | filter:search.value" [value]="api">
+            {{api.name}}
           </mat-option>
         </mat-select>
       </mat-form-field>
     </div>
   </div>
+
+
   <div class="row">
     <div class="col">
-      <h3>JsonLD Editor – Edit JsonLD context here
-        <mat-icon class="mx-2" matTooltip="Only enter the JsonLd context without the enclosing @context">
-          info
-        </mat-icon>
-      </h3>
-
-      <app-editor-zone leftHeading="Request Context" rightHeading="Response Context"
-        [leftData]="selectedInterface.value?.request.jsonLdContext"
-        [rightData]="selectedInterface.value?.response.jsonLdContext"
-        (saveLeft)="save($event, selectedInterface.value, selectedInterface.value?.request)"
-        (saveRight)="save($event, selectedInterface.value, selectedInterface.value?.response)">
-      </app-editor-zone>
-    </div>
-  </div>
-  <div class="row mt-5">
-    <div class="col">
-      <mat-accordion multi="true">
-        <mat-expansion-panel [disabled]="!selectedInterface.valid" [expanded]="selectedInterface.valid">
+      <mat-accordion>
+        <mat-expansion-panel [disabled]="!selectedApi.valid" [expanded]="selectedApi.valid">
           <mat-expansion-panel-header>
             <mat-panel-title>
-              <b>Interface overview</b>
+              <b>Edit API</b>
             </mat-panel-title>
             <mat-panel-description>
-              Inspect the selected interface
+              {{(!selectedApi.valid) ? "Select an API first or create a new one" : "Edit API data"}}
             </mat-panel-description>
           </mat-expansion-panel-header>
 
-          <div class="pt-2">
+          <div class="pt-2" *ngIf="selectedApi.value">
             <div class="row">
-              <div class="col-4 border-right">
-                <mat-tree [dataSource]="leftDataSource" [treeControl]="leftTreeControl" class="mat-tree">
-                  <!-- Leaf nodes -->
-                  <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
-                    <li class="mat-tree-node">
-                      <mat-icon></mat-icon>
-                      <div class="px-3">{{node.name}}</div>
-                    </li>
-                  </mat-tree-node>
-                  <!-- Expandable nodes -->
-                  <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild">
-                    <li>
-                      <div class="mat-tree-node">
-                        <mat-icon>
-                          {{leftTreeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-                        </mat-icon>
-                        <button mat-button matTreeNodeToggle>{{node.name}}</button>
-                      </div>
-                      <ul [class.mat-tree-invisible]="!leftTreeControl.isExpanded(node)">
-                        <ng-container matTreeNodeOutlet></ng-container>
-                      </ul>
-                    </li>
-                  </mat-nested-tree-node>
-                </mat-tree>
+              <div class="col">
+                <mat-form-field>
+                  <label>Name*</label>
+                  <input required matInput type="text" [(ngModel)]="selectedApi.value.name">
+                </mat-form-field>
               </div>
-              <div class="col-4">
+            </div>
+            <div class="row">
+              <div class="col">
+                <mat-form-field>
+                  <label>Company</label>
+                  <input matInput type="text" [(ngModel)]="selectedApi.value.metadata.company">
+                </mat-form-field>
               </div>
-              <div class="col-4 border-left">
-                <mat-tree [dataSource]="rightDataSource" [treeControl]="rightTreeControl" class="mat-tree">
-                  <!-- Leaf nodes -->
-                  <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
-                    <li class="mat-tree-node">
-                      <mat-icon></mat-icon>
-                      <div class="px-3">{{node.name}}</div>
-                    </li>
-                  </mat-tree-node>
-                  <!-- Expandable nodes -->
-                  <mat-nested-tree-node *matTreeNodeDef="let node; when: hasChild">
-                    <li>
-                      <div class="mat-tree-node">
-                        <mat-icon>
-                          {{rightTreeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-                        </mat-icon>
-                        <button mat-button matTreeNodeToggle>{{node.name}}</button>
-                      </div>
-                      <ul [class.mat-tree-invisible]="!rightTreeControl.isExpanded(node)">
-                        <ng-container matTreeNodeOutlet></ng-container>
-                      </ul>
-                    </li>
-                  </mat-nested-tree-node>
-                </mat-tree>
+            </div>
+            <div class="row">
+              <div class="col">
+                <mat-form-field>
+                  <label>Keywords</label>
+                  <input matInput type="text" [(ngModel)]="selectedApi.value.metadata.keywords">
+                </mat-form-field>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col d-flex flex-column">
+                <label class="mb-2">OpenAPI Specification*</label>
+                Upload file
+                <input type="file" accept="application/JSON" (change)="handleFileInput($event.target.files)"/>
+                or paste JSON
+                <app-json-editor [data]="selectedApi.value.openApiSpec" (jsonChange)="selectedApi.value.openApiSpec = $event"></app-json-editor>
               </div>
             </div>
           </div>
@@ -100,11 +72,12 @@
       </mat-accordion>
     </div>
   </div>
+
   <div class="row mt-5">
     <div class="col">
-      <button mat-raised-button color="warn" [disabled]="!selectedInterface.valid" (click)="reset()">Reset</button>
-      <button mat-raised-button color="accent" class="float-right"
-        [disabled]="!selectedInterface.valid" (click)="finish()">Finish</button>
+      <button mat-raised-button color="warn" [disabled]="!selectedApi.valid" (click)="reset()">Reset</button>
+      <button mat-raised-button color="accent" class="float-right" [disabled]="!selectedApi.valid"
+        (click)="finish()">Finish</button>
     </div>
   </div>
 </ng-container>
