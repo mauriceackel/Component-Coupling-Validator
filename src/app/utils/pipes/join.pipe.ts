@@ -1,4 +1,4 @@
-import { Pipe, PipeTransform, NgModule } from "@angular/core";
+import { NgModule, Pipe, PipeTransform } from "@angular/core";
 
 @Pipe({
   name: "join"
@@ -6,7 +6,7 @@ import { Pipe, PipeTransform, NgModule } from "@angular/core";
 export class JoinPipe implements PipeTransform {
 
   transform(array: Array<any>, sep = ', '): string {
-    if (array instanceof Array) {
+    if (Array.isArray(array)) {
       return array.join(sep)
     }
   }
