@@ -2,7 +2,7 @@ import { Injectable } from "@angular/core";
 import { IInterface } from '../models/interface.model';
 import { IMapping } from '../models/mapping.model';
 import { ValidationError } from '../utils/errors/validation-error';
-import { getBodySchema, getResponseSchema } from '../utils/swagger-parser';
+import { getRequestSchema, getResponseSchema } from '../utils/swagger-parser';
 import { KeyChain } from './jsontree.service';
 
 @Injectable({
@@ -13,7 +13,7 @@ export class ValidationService {
   public async validateMapping(source: IInterface, target: IInterface, mapping: IMapping) {
     const { api: srcApi, ...srcOperation } = source;
     const { api: trgApi, ...trgOperation } = target;
-    const missingRequest = this.findMissing(JSON.parse(mapping.requestMapping), await getBodySchema(srcApi, srcOperation));
+    const missingRequest = this.findMissing(JSON.parse(mapping.requestMapping), await getRequestSchema(srcApi, srcOperation, true));
     const missingResponse = this.findMissing(JSON.parse(mapping.responseMapping), await getResponseSchema(trgApi, trgOperation));
 
     if (missingRequest.length > 0 || missingResponse.length > 0) {

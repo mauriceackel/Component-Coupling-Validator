@@ -14,7 +14,7 @@ import { TaskService } from '~/app/services/task.service';
 import { ValidationService } from '~/app/services/validation.service';
 import { ValidationError } from '~/app/utils/errors/validation-error';
 import { ButtonType, GenericDialog } from '~/app/utils/generic-dialog/generic-dialog.component';
-import { getBodySchema, getOperationTemplates, getResponseSchema, IOperationTemplate } from '~/app/utils/swagger-parser';
+import { getOperationTemplates, getRequestSchema, getResponseSchema, IOperationTemplate } from '~/app/utils/swagger-parser';
 
 @Component({
   selector: 'app-transformation',
@@ -88,7 +88,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
       const source = this.parseSource();
       this.mappingSource = source;
       if (source) {
-        this.sourceRequestBody = await getBodySchema(source.api, { operationId: source.operationId, responseId: source.responseId });
+        this.sourceRequestBody = await getRequestSchema(source.api, { operationId: source.operationId, responseId: source.responseId });
         this.sourceResponseBody = await getResponseSchema(source.api, { operationId: source.operationId, responseId: source.responseId });
       }
     }));
@@ -99,7 +99,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
       const target = this.parseTarget();
       this.mappingTarget = target;
       if (target) {
-        this.targetRequestBody = await getBodySchema(target.api, { operationId: target.operationId, responseId: target.responseId });
+        this.targetRequestBody = await getRequestSchema(target.api, { operationId: target.operationId, responseId: target.responseId });
         this.targetResponseBody = await getResponseSchema(target.api, { operationId: target.operationId, responseId: target.responseId });
       }
     }))

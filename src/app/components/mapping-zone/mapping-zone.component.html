@@ -27,7 +27,7 @@
           <li class="mat-tree-node">
             <mat-icon></mat-icon>
             <button mat-button [ngClass]="{'mat-accent': selectedLeft.includes(node)}" (click)="selectLeft(node)"
-              [disabled]="!isRequest && isMapped(node)">{{node.name}}</button>
+              [disabled]="!isRequest && isMapped(node)">{{node.name}}{{node.optional ? ' (optional)' : ''}}</button>
           </li>
         </mat-tree-node>
         <!-- Expandable nodes -->
@@ -72,7 +72,7 @@
           <li class="mat-tree-node">
             <mat-icon></mat-icon>
             <button mat-button [ngClass]="{'mat-accent': selectedRight.includes(node)}" (click)="selectRight(node)"
-              [disabled]="isRequest && isMapped(node)">{{node.name}}</button>
+              [disabled]="isRequest && isMapped(node)">{{node.name}}{{node.optional ? ' (optional)' : ''}}</button>
           </li>
         </mat-tree-node>
         <!-- Expandable nodes -->

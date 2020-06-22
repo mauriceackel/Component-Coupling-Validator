@@ -89,9 +89,9 @@ export async function getResponseSchema(api: IApi, searchOperation: IOperation) 
 
     //Iterate all operations in a path
     for (const op in path) {
-      let property = op as keyof OpenAPIV3.PathItemObject | keyof OpenAPIV2.PathItemObject;
+      const property = op as keyof OpenAPIV3.PathItemObject | keyof OpenAPIV2.PathItemObject;
       if (["get", "post", "delete", "put", "patch", "trace", "head", "options"].includes(property)) {
-        let operation = path[property] as OpenAPIV3.OperationObject | OpenAPIV2.OperationObject;
+        const operation = path[property] as OpenAPIV3.OperationObject | OpenAPIV2.OperationObject;
 
         //Filter for an operation that matches the searchOperation id
         if (operation.operationId == searchOperation.operationId) {
@@ -101,13 +101,69 @@ export async function getResponseSchema(api: IApi, searchOperation: IOperation) 
 
             //Filter for response which matches the searched response id
             if (res == searchOperation.responseId) {
-              let response = operation.responses[res] as OpenAPIV3.ResponseObject | OpenAPIV2.ResponseObject;
+              const response = operation.responses[res] as OpenAPIV3.ResponseObject | OpenAPIV2.ResponseObject;
 
               const v2Content = (response as OpenAPIV2.ResponseObject).schema;
               const v3Content = (response as OpenAPIV3.ResponseObject).content && (response as OpenAPIV3.ResponseObject).content["application/json"]["schema"];
 
-              let jsonResponse = v2Content || v3Content || {};
+              const jsonResponse = v2Content || v3Content || {};
               return removeTypes(flattenSchema(jsonResponse));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+export async function getRequestSchema(api: IApi, searchOperation: IOperation, ignoreOptional: boolean = false) {
+  let apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document | OpenAPIV2.Document;
+
+  const result = { schema: {} } as any;
+
+  //Iterate all pathes
+  for (const url in apiObject.paths) {
+    const path = apiObject.paths[url];
+
+    //Iterate all operations in a path
+    for (const op in path) {
+      const property = op as keyof OpenAPIV3.PathItemObject | keyof OpenAPIV2.PathItemObject;
+      if (["get", "post", "delete", "put", "patch", "trace", "head", "options"].includes(property)) {
+        const operation = path[property] as OpenAPIV3.OperationObject | OpenAPIV2.OperationObject;
+
+        //Filter for an operation that matches the searchOperation id
+        if (operation.operationId == searchOperation.operationId) {
+
+          //Get all required parameters
+          const parameters = ([...path.parameters || [], ...operation.parameters || []] as (OpenAPIV3.ParameterObject | OpenAPIV2.InBodyParameterObject | OpenAPIV2.GeneralParameterObject)[])
+            .filter(p => p.in !== "body" && (!ignoreOptional || p.in === "path" || p.required))
+            .reduce((prev, curr) => {
+              prev[curr.name] = { 'x-optional': !curr.required, ...curr.schema };
+              return prev;
+            }, {});
+          if (Object.keys(parameters).length !== 0) {
+            result.schema.parameters = removeTypes(flattenSchema({ type: "object", properties: parameters }));
+          }
+
+          //Iterate all responses in the matching operation
+          for (const res in operation.responses) {
+
+            //Filter for response which matches the searched response id
+            if (res == searchOperation.responseId) {
+
+              const params = operation.parameters as OpenAPIV2.InBodyParameterObject[];
+              const v2Content = params && { type: "object", properties: params.filter(p => p.in === "body").reduce((obj, e) => { obj[e.name] = e.schema; return obj }, {}) };
+
+              const body = operation.requestBody as OpenAPIV3.RequestBodyObject;
+              const v3Content = body && (body as OpenAPIV3.RequestBodyObject).content && (body as OpenAPIV3.RequestBodyObject).content["application/json"]["schema"];
+
+              const jsonBody = v2Content || v3Content;
+              if (jsonBody) {
+                result.schema.body = removeTypes(flattenSchema(jsonBody));
+              }
+              return result;
             }
           }
         }
@@ -123,11 +179,11 @@ function removeTypes(schema: any) {
     for (const key in schema.properties) {
       schema.properties[key] = removeTypes(schema.properties[key])
     }
-    return schema.properties || {};
+    return { 'x-optional': schema['x-optional'], schema: schema.properties || {} };
   } else if (schema["type"] == "array") {
-    return [removeTypes(schema.items)]
+    return { 'x-optional': schema['x-optional'], schema: [removeTypes(schema.items)] };
   } else {
-    return schema["type"];
+    return { 'x-optional': schema["x-optional"], schema: schema["type"] };
   }
 }
 
@@ -147,46 +203,6 @@ function flattenSchema(schema: any) {
   } else {
     return schema;
   }
-}
-
-export async function getBodySchema(api: IApi, searchOperation: IOperation) {
-  let apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document | OpenAPIV2.Document;
-
-  //Iterate all pathes
-  for (const url in apiObject.paths) {
-    let path = apiObject.paths[url];
-
-    //Iterate all operations in a path
-    for (const op in path) {
-      let property = op as keyof OpenAPIV3.PathItemObject | keyof OpenAPIV2.PathItemObject;
-      if (["get", "post", "delete", "put", "patch", "trace", "head", "options"].includes(property)) {
-        let operation = path[property] as OpenAPIV3.OperationObject | OpenAPIV2.OperationObject;
-
-        //Filter for an operation that matches the searchOperation id
-        if (operation.operationId == searchOperation.operationId) {
-
-          //Iterate all responses in the matching operation
-          for (const res in operation.responses) {
-
-            //Filter for response which matches the searched response id
-            if (res == searchOperation.responseId) {
-
-              const params = operation.parameters as OpenAPIV2.InBodyParameterObject[];
-              const v2Content = params && params.filter(p => p.in === "body").reduce((obj, e) => { obj[e.name] = e.schema; return obj }, {});
-
-              const body = operation.requestBody as OpenAPIV3.RequestBodyObject;
-              const v3Content = body && (body as OpenAPIV3.RequestBodyObject).content && (body as OpenAPIV3.RequestBodyObject).content["application/json"]["schema"];
-
-              let jsonBody = v2Content || v3Content || {};
-              return removeTypes(flattenSchema(jsonBody));
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return undefined;
 }
 
 export interface IOperationTemplate {
