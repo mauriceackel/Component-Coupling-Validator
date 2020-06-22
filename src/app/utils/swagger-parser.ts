@@ -21,10 +21,17 @@ export async function getServer(api: IApi) {
   }
 }
 
-export async function getRequestUrl(iface: IInterface) {
+export async function getRequestUrl(iface: IInterface, paramValues: { [key: string]: string } = {}) {
   const server = await getServer(iface.api);
-  const { url, method } = await getOperation(iface.api, iface.operationId);
-  return { method, url: `${server}${url}` }
+  const { url, method, path, operation } = await getOperation(iface.api, iface.operationId);
+
+  //Get all required parameters
+  const parameters = ([...path.parameters || [], ...operation.parameters || []] as (OpenAPIV3.ParameterObject | OpenAPIV2.InBodyParameterObject | OpenAPIV2.GeneralParameterObject)[])
+
+  const query = parameters.filter(p => p.in === "query").map(p => paramValues[p.name] && `${p.name}=${paramValues[p.name]}`).filter(Boolean).join('&');
+  const urlWithParams = parameters.filter(p => p.in === "path").reduce((currUrl, currParam) => currUrl.replace(new RegExp(`{${currParam.name}}`, 'g'), paramValues[currParam.name] || ''), url);
+
+  return { method, url: `${server}${urlWithParams}${query ? '?' + query : ''}` }
 }
 
 export async function getOperationTemplates(api: IApi) {
@@ -61,17 +68,17 @@ export async function getOperation(api: IApi, operationId: string) {
 
   //Iterate all pathes
   for (const url in apiObject.paths) {
-    let path = apiObject.paths[url];
+    const path = apiObject.paths[url];
 
     //Iterate all operations in a path
     for (const op in path) {
-      let property = op as keyof OpenAPIV3.PathItemObject;
+      const property = op as keyof OpenAPIV3.PathItemObject;
       if (["get", "post", "delete", "put", "patch", "trace", "head", "options"].includes(property)) {
-        let operation = path[property] as OpenAPIV3.OperationObject;
+        const operation = path[property] as OpenAPIV3.OperationObject;
 
         //Filter for an operation that matches the searchOperation id
         if (operation.operationId == operationId) {
-          return { method: property, url };
+          return { method: property, url, path, operation };
         }
       }
     }
@@ -121,7 +128,7 @@ export async function getResponseSchema(api: IApi, searchOperation: IOperation) 
 export async function getRequestSchema(api: IApi, searchOperation: IOperation, ignoreOptional: boolean = false) {
   let apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document | OpenAPIV2.Document;
 
-  const result = { schema: {} } as any;
+  const result = {} as any;
 
   //Iterate all pathes
   for (const url in apiObject.paths) {
@@ -140,11 +147,11 @@ export async function getRequestSchema(api: IApi, searchOperation: IOperation, i
           const parameters = ([...path.parameters || [], ...operation.parameters || []] as (OpenAPIV3.ParameterObject | OpenAPIV2.InBodyParameterObject | OpenAPIV2.GeneralParameterObject)[])
             .filter(p => p.in !== "body" && (!ignoreOptional || p.in === "path" || p.required))
             .reduce((prev, curr) => {
-              prev[curr.name] = { 'x-optional': !curr.required, ...curr.schema };
+              prev[curr.name] = curr.schema;
               return prev;
             }, {});
           if (Object.keys(parameters).length !== 0) {
-            result.schema.parameters = removeTypes(flattenSchema({ type: "object", properties: parameters }));
+            result.parameters = removeTypes(flattenSchema({ type: "object", properties: parameters }));
           }
 
           //Iterate all responses in the matching operation
@@ -161,7 +168,7 @@ export async function getRequestSchema(api: IApi, searchOperation: IOperation, i
 
               const jsonBody = v2Content || v3Content;
               if (jsonBody) {
-                result.schema.body = removeTypes(flattenSchema(jsonBody));
+                result.body = removeTypes(flattenSchema(jsonBody));
               }
               return result;
             }
@@ -179,11 +186,11 @@ function removeTypes(schema: any) {
     for (const key in schema.properties) {
       schema.properties[key] = removeTypes(schema.properties[key])
     }
-    return { 'x-optional': schema['x-optional'], schema: schema.properties || {} };
+    return schema.properties || {};
   } else if (schema["type"] == "array") {
-    return { 'x-optional': schema['x-optional'], schema: [removeTypes(schema.items)] };
+    return [removeTypes(schema.items)];
   } else {
-    return { 'x-optional': schema["x-optional"], schema: schema["type"] };
+    return schema["type"];
   }
 }
 

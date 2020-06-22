@@ -19,9 +19,9 @@ export class RequestService {
 
     const targetInputData = jsonata(stringifyedToJsonata(mapping.requestMapping)).evaluate(sourceInputData);
 
-    const { method, url } = await getRequestUrl(targetInterface);
+    const { method, url } = await getRequestUrl(targetInterface, targetInputData.parameters);
 
-    const response = await this.httpClient.request<any>(method, url, { body: targetInputData, responseType: "json" }).toPromise();
+    const response = await this.httpClient.request<any>(method, url, { body: targetInputData.body, responseType: "json" }).toPromise();
 
     const sourceOutputData = jsonata(stringifyedToJsonata(mapping.responseMapping)).evaluate(response);
 

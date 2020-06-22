@@ -6,15 +6,14 @@ import { Injectable } from "@angular/core";
 export class JsonTreeService {
 
   public toTree(jsonObject: any, keyChain: Array<string> = []): JsonTreeNode[] {
-    if (jsonObject && jsonObject.schema && typeof jsonObject.schema === "object" && !(jsonObject.schema instanceof Array)) {
-      return Object.keys(jsonObject.schema).map(key => {
+    if (jsonObject && typeof jsonObject === "object" && !(jsonObject instanceof Array)) {
+      return Object.keys(jsonObject).map(key => {
         const kChain = new Array<string>(...keyChain, key);
 
         return {
           name: key,
-          optional: jsonObject.schema[key]['x-optional'],
           keyChain: kChain,
-          children: this.toTree(jsonObject.schema[key], kChain)
+          children: this.toTree(jsonObject[key], kChain)
         }
       });
     }

@@ -1,7 +1,8 @@
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import * as jsonata from 'jsonata';
 import { IInterface } from '~/app/models/interface.model';
 import { IMappingPair, MappingType } from '~/app/models/mapping.model';
-import { MappingService } from '~/app/services/mapping.service';
+import { MappingService, stringifyedToJsonata } from '~/app/services/mapping.service';
 import { RequestService } from '~/app/services/request.service';
 import { ValidationService } from '~/app/services/validation.service';
 import { ValidationError } from '~/app/utils/errors/validation-error';
@@ -44,8 +45,8 @@ export class RequestZoneComponent implements OnInit, OnChanges {
       this.currentInputData = this.inputData;
     }
     if (changes.mappingTarget) {
-      if(this.mappingTarget) {
-        const {method, url} = await getRequestUrl(this.mappingTarget);
+      if (this.mappingTarget) {
+        const { method, url } = await getRequestUrl(this.mappingTarget);
         this.server = url;
         this.method = method;
       }
@@ -58,6 +59,12 @@ export class RequestZoneComponent implements OnInit, OnChanges {
     try {
       await this.validationService.validateMapping(this.mappingSource, this.mappingTarget, mapping);
       this.mappingError = undefined;
+
+      const targetInputData = jsonata(stringifyedToJsonata(mapping.requestMapping)).evaluate(this.currentInputData);
+
+      const { method, url } = await getRequestUrl(this.mappingTarget, targetInputData.parameters);
+      this.server = url;
+      this.method = method;
 
       this.outputData = await this.requestService.sendRequest(this.currentInputData, mapping, this.mappingTarget);
     } catch (err) {
