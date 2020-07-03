@@ -161,12 +161,14 @@ export async function getRequestSchema(api: IApi, searchOperation: IOperation, i
             if (res == searchOperation.responseId) {
 
               const params = operation.parameters as OpenAPIV2.InBodyParameterObject[];
-              const v2Content = params && { type: "object", properties: params.filter(p => p.in === "body").reduce((obj, e) => { obj[e.name] = e.schema; return obj }, {}) };
+              const bodyParameter = params && params.filter(p => p.in === "body");
+              const v2Content = bodyParameter && bodyParameter.length > 0 && { type: "object", properties: bodyParameter.reduce((obj, e) => { obj[e.name] = e.schema; return obj }, {}) };
 
               const body = operation.requestBody as OpenAPIV3.RequestBodyObject;
               const v3Content = body && (body as OpenAPIV3.RequestBodyObject).content && (body as OpenAPIV3.RequestBodyObject).content["application/json"]["schema"];
 
               const jsonBody = v2Content || v3Content;
+
               if (jsonBody) {
                 result.body = removeTypes(flattenSchema(jsonBody));
               }
