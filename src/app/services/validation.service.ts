@@ -13,8 +13,8 @@ export class ValidationService {
   public async validateMapping(source: IInterface, target: IInterface, mapping: IMapping) {
     const { api: srcApi, ...srcOperation } = source;
     const { api: trgApi, ...trgOperation } = target;
-    const missingRequest = this.findMissing(JSON.parse(mapping.requestMapping), await getRequestSchema(srcApi, srcOperation, true));
-    const missingResponse = this.findMissing(JSON.parse(mapping.responseMapping), await getResponseSchema(trgApi, trgOperation));
+    const missingRequest = this.findMissing(JSON.parse(mapping.requestMapping), await getRequestSchema(trgApi, trgOperation, true));
+    const missingResponse = this.findMissing(JSON.parse(mapping.responseMapping), await getResponseSchema(srcApi, srcOperation));
 
     if (missingRequest.length > 0 || missingResponse.length > 0) {
       let errorMessage = ""
