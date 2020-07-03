@@ -15,6 +15,7 @@ import { ValidationService } from '~/app/services/validation.service';
 import { ValidationError } from '~/app/utils/errors/validation-error';
 import { ButtonType, GenericDialog } from '~/app/utils/generic-dialog/generic-dialog.component';
 import { getOperationTemplates, getRequestSchema, getResponseSchema, IOperationTemplate } from '~/app/utils/swagger-parser';
+import { AdapterService, AdapterType } from '~/app/services/adapter.service';
 
 @Component({
   selector: 'app-transformation',
@@ -57,6 +58,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
   constructor(
     private apiService: ApiService,
     private mappingService: MappingService,
+    private adapterService: AdapterService,
     private validationService: ValidationService,
     private dialog: MatDialog,
     private activatedRoute: ActivatedRoute,
@@ -162,6 +164,31 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.testRequest.close();
     this.inputForm.reset();
     this.ngOnInit();
+  }
+
+  public async buildAdapter() {
+    try {
+      if ([...this.requestMappingPairs, ...this.responseMappingPairs].some(mp => !mp.mappingCode)) {
+        throw new ValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")
+      }
+
+      const source = this.parseSource();
+      const target = this.parseTarget();
+      const mapping = this.mappingService.buildMapping(source, target, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
+
+      await this.validationService.validateMapping(source, target, mapping);
+
+      this.mappingError = undefined;
+      const downloadLink = await this.adapterService.createAdapter(mapping, AdapterType.JAVASCRIPT);
+
+      window.open(downloadLink, "_blank");
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        this.mappingError = err;
+        return;
+      }
+      throw err;
+    }
   }
 
   public async finishMapping() {
