@@ -12,6 +12,8 @@
 #Binary Code
 **/bin
 
+tmp
+
 #Logs
 *.log
 
