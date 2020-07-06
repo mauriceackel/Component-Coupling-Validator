@@ -83,14 +83,15 @@ export default class <&classname> {
       const parameters = { ...pathParams, ...queryParams, ...headerParams, ...formParams };
       const inputData = { parameters, body: postBody };
       const { parameters: targetParameters, body: targetBody } = await jsonata(requestMapping).evaluate(inputData);
-      
+
       async function callTarget(targetInput) {
         const { <targetOptions><#targetHasOptional>, ...opts</targetHasOptional> } = targetInput;
 
         const targetApiClient = new TargetApiClient();
         const data = await new AdapterTargetApi(targetApiClient).controlLight(<targetOptions><#targetHasOptional>, opts</targetHasOptional>);
 
-        return await jsonata(responseMapping).evaluate(data);
+        const result = await jsonata(responseMapping).evaluate(data);
+        return { data: result };
       }
 
       <#targetHasBody>

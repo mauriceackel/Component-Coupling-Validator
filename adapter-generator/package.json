@@ -1,7 +1,7 @@
 {
-  "name": "auth-service",
+  "name": "adapter-generator",
   "version": "1.0.0",
-  "description": "Authentication service that provides JWT authentication as well as route-based aauthorization",
+  "description": "",
   "author": "Maurice Ackel",
   "main": "Service.js",
   "scripts": {
