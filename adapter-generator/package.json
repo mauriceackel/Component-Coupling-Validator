@@ -6,6 +6,7 @@
   "main": "Service.js",
   "scripts": {
     "build": "tsc",
+    "postbuild": "cp -r ./src/ssl ./bin/",
     "start": "node ./bin/Service.js",
     "debug": "node --inspect ./bin/Service.js"
   },
