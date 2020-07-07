@@ -88,7 +88,7 @@ function parseJavaScriptTarget(filePath: string): { targetApiName: string, targe
 
 async function generateOpenApiInterface(generator: string, path: string, options?: string) {
     const additionalOptions = options ? ` -p=${options}` : '';
-    const executable = "java -cp lib/javascript-adapter-openapi-generator-1.0.0.jar:lib/javascript-target-openapi-generator-1.0.0.jar:lib/openapi-generator-cli.jar org.openapitools.codegen.OpenAPIGenerator";
+    const executable = "java -cp openapi-generator/javascript-adapter-openapi-generator-1.0.0.jar:openapi-generator/javascript-target-openapi-generator-1.0.0.jar:openapi-generator/openapi-generator-cli.jar org.openapitools.codegen.OpenAPIGenerator";
 
     const command = `${executable} generate -g ${generator} -i ${path}/apiSpec.json -o ${path}${additionalOptions}`;
 
