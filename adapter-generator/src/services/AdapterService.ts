@@ -60,10 +60,23 @@ async function createJavaScriptAdapter(filePath: string, mapping: IMapping, sour
     const responseMapping = Buffer.from(escapeQuote(stringifyedToJsonata(mapping.responseMapping))).toString('base64');
     const requestMapping =  Buffer.from(escapeQuote(stringifyedToJsonata(mapping.requestMapping))).toString('base64');
 
+    const additionalParameters: string[] = [];
+    additionalParameters.push(`operationId=${camelcase(sourceOperationId)}`);
+    if(targetApiName) additionalParameters.push(`targetApiName=${targetApiName}`);
+    if(targetOptions) additionalParameters.push(`targetOptions=${targetOptions.join('.')}`);
+    if(targetHasBody) additionalParameters.push(`targetHasBody=true`);
+    if(targetBodyName) additionalParameters.push(`targetBodyName=${targetBodyName}`);
+    if(targetHasOptional) additionalParameters.push(`targetHasOptional=true`);
+    additionalParameters.push(`requestMapping=${requestMapping}`);
+    additionalParameters.push(`responseMapping=${responseMapping}`);
+    additionalParameters.push(`usePromises=true`);
+    additionalParameters.push(`projectVersion=0.0.1`);
+
+
     await generateOpenApiInterface(
         'javascript-adapter',
         `${filePath}/source`,
-        `operationId=${camelcase(sourceOperationId)},targetApiName=${targetApiName},targetOptions=${targetOptions.join('.')},targetHasBody=${targetHasBody},targetBodyName=${targetBodyName},targetHasOptional=${targetHasOptional},requestMapping=${requestMapping},responseMapping=${responseMapping},usePromises=true,projectVersion=0.0.1`
+        additionalParameters.join(',')
     );
 }
 
