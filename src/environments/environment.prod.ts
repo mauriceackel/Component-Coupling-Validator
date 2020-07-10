@@ -1,5 +1,6 @@
 export const environment = {
   production: true,
+  adapterServiceBaseUrl: "https://iot.informatik.uni-mannheim.de:8200",
   firebase: {
     apiKey: "AIzaSyAzYN7Id-HtrJxZt6SNGUwDJ11gLDOlFDg",
     authDomain: "integrateit-41c60.firebaseapp.com",

@@ -1,8 +1,9 @@
 import { Injectable } from "@angular/core";
 import { IMapping } from '../models/mapping.model';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '~/environments/environment';
 
-const adapterServiceBaseUrl = "http://localhost:8080";
+const adapterServiceBaseUrl = environment.adapterServiceBaseUrl;
 const adapterServiceAdapterUrl = `${adapterServiceBaseUrl}/create-adapter`;
 const adapterServiceDownloadUrl = `${adapterServiceBaseUrl}/download`;
 
