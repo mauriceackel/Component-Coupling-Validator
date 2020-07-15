@@ -47,3 +47,15 @@ mat-expansion-panel-header mat-panel-title {
   display: block !important;
   line-height: 0px !important;
 }
+
+.btn-no-overflow {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.btn-overflow-left {
+  direction: rtl !important;
+  text-align: right !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}

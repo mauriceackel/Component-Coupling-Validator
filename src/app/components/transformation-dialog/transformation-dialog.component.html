@@ -5,7 +5,7 @@
       <div class="overflow-auto">
         <h3 class="mb-0">Available Keys</h3>
         <div class="d-flex flex-column p-1">
-          <button mat-button (click)="insertKey(key)" *ngFor="let key of keys">{{key}}</button>
+          <button mat-button class="btn-overflow-left" (click)="insertKey(key)" *ngFor="let key of keys">{{key}}</button>
         </div>
       </div>
     </div>
