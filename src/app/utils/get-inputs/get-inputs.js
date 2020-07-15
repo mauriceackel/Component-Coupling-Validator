@@ -163,6 +163,7 @@ var jsonata = (function () {
    * @returns {*} Evaluated input data
    */
   function* evaluatePath(expr, input, environment) {
+    inputs.push(expr.steps.map(s => s.value).join('.'));
     var inputSequence;
     // expr is an array of steps
     // if the first step is a variable reference ($...), including root reference ($$),
@@ -569,7 +570,6 @@ var jsonata = (function () {
    */
   function evaluateName(expr, input, environment) {
     // lookup the 'name' item in the input
-    inputs.push(expr.value);
     return fn.lookup(input, expr.value);
   }
 
