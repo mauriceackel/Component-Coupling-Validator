@@ -45,7 +45,7 @@ export class ApiService {
   }
 
   public async updateApi(api: IApi) {
-    return this.apiColl.doc(api.id || this.firestore.createId()).set(this.serializeApi(api));
+    return this.apiColl.doc(api.id || "X" + this.firestore.createId()).set(this.serializeApi(api));
   }
 
 }
