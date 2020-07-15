@@ -6,7 +6,7 @@ import { MappingService, stringifyedToJsonata } from '~/app/services/mapping.ser
 import { RequestService } from '~/app/services/request.service';
 import { ValidationService } from '~/app/services/validation.service';
 import { ValidationError } from '~/app/utils/errors/validation-error';
-import { getRequestUrl } from '~/app/utils/swagger-parser';
+import { getRequestUrls } from '~/app/utils/swagger-parser';
 
 @Component({
   selector: 'app-request-zone',
@@ -20,11 +20,11 @@ export class RequestZoneComponent implements OnInit, OnChanges {
   @Input("inputData") public inputData: any;
   public currentInputData: any;
   public outputData: any;
-  public server: string;
-  public method: string;
+
+  public endpoints: Array<{url: string, method: string}> = [];
 
   @Input("mappingSource") public mappingSource: IInterface;
-  @Input("mappingTarget") public mappingTarget: IInterface;
+  @Input("mappingTargets") public mappingTargets: { [key: string]: IInterface };
 
   @Input("requestMappingPairs") public requestMappingPairs: Array<IMappingPair>;
   @Input("responseMappingPairs") public responseMappingPairs: Array<IMappingPair>;
@@ -44,29 +44,24 @@ export class RequestZoneComponent implements OnInit, OnChanges {
     if (changes.inputData) {
       this.currentInputData = this.inputData;
     }
-    if (changes.mappingTarget) {
-      if (this.mappingTarget) {
-        const { method, url } = await getRequestUrl(this.mappingTarget);
-        this.server = url;
-        this.method = method;
+    if (changes.mappingTargets) {
+      if (this.mappingTargets) {
+        this.endpoints = await getRequestUrls(this.mappingTargets);
       }
     }
     this.ngOnInit();
   }
 
   public async testRequest() {
-    const mapping = this.mappingService.buildMapping(this.mappingSource, this.mappingTarget, this.requestMappingPairs, this.responseMappingPairs, MappingType.AUTO);
+    const mapping = this.mappingService.buildMapping(this.mappingSource, this.mappingTargets, this.requestMappingPairs, this.responseMappingPairs, MappingType.AUTO);
     try {
-      await this.validationService.validateMapping(this.mappingSource, this.mappingTarget, mapping);
+      await this.validationService.validateMapping(this.mappingSource, this.mappingTargets, mapping);
       this.mappingError = undefined;
 
       const targetInputData = jsonata(stringifyedToJsonata(mapping.requestMapping)).evaluate(this.currentInputData);
+      this.endpoints = await getRequestUrls(this.mappingTargets, targetInputData);
 
-      const { method, url } = await getRequestUrl(this.mappingTarget, targetInputData.parameters);
-      this.server = url;
-      this.method = method;
-
-      this.outputData = await this.requestService.sendRequest(this.currentInputData, mapping, this.mappingTarget);
+      this.outputData = await this.requestService.sendRequest(this.currentInputData, mapping, this.mappingTargets);
     } catch (err) {
       if (err instanceof ValidationError) {
         this.outputData = {};

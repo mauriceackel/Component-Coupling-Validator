@@ -3,6 +3,7 @@ import { IInterface } from '../models/interface.model';
 import { IMapping } from '../models/mapping.model';
 import { ValidationError } from '../utils/errors/validation-error';
 import { getRequestSchema, getResponseSchema } from '../utils/swagger-parser';
+import { flatten, unflatten } from 'flat';
 import { KeyChain } from './jsontree.service';
 
 @Injectable({
@@ -10,22 +11,30 @@ import { KeyChain } from './jsontree.service';
 })
 export class ValidationService {
 
-  public async validateMapping(source: IInterface, target: IInterface, mapping: IMapping) {
+  public async validateMapping(source: IInterface, targets: { [key: string]: IInterface }, mapping: IMapping) {
     const { api: srcApi, ...srcOperation } = source;
-    const { api: trgApi, ...trgOperation } = target;
-    const missingRequest = this.findMissing(JSON.parse(mapping.requestMapping), await getRequestSchema(trgApi, trgOperation, true));
-    const missingResponse = this.findMissing(JSON.parse(mapping.responseMapping), await getResponseSchema(srcApi, srcOperation));
+
+    const targetRequestBodies = {};
+    for (const [key, value] of Object.entries(targets || {})) {
+      targetRequestBodies[key] = await getRequestSchema(value.api, { operationId: value.operationId, responseId: value.responseId }, true)
+    }
+    const missingRequest = this.findMissing(JSON.parse(mapping.requestMapping), targetRequestBodies);
+
+    const sourceRequestBody = {
+      [`${srcApi.id}${srcOperation.operationId}${srcOperation.responseId}`]: await getResponseSchema(srcApi, srcOperation)
+    }
+    const missingResponse = this.findMissing(JSON.parse(mapping.responseMapping), sourceRequestBody);
 
     if (missingRequest.length > 0 || missingResponse.length > 0) {
       let errorMessage = ""
       if (missingRequest.length > 0 && missingResponse.length < 1) {
-        errorMessage = "Missing request mappings " + missingRequest
+        errorMessage = "Missing request mappings " + missingRequest.map(m => m.join('.')).join(', ')
       }
       if (missingRequest.length < 1 && missingResponse.length > 0) {
-        errorMessage = " Missing response mappings " + missingResponse
+        errorMessage = " Missing response mappings " + missingResponse.map(m => m.join('.')).join(', ')
       }
       if (missingRequest.length > 0 && missingResponse.length > 0) {
-        errorMessage = "Missing request mappings " + missingRequest + ". Missing response mappings " + missingResponse
+        errorMessage = "Missing request mappings\n" + missingRequest.map(m => m.join('.')).join(', ') + "\n\nMissing response mappings\n" + missingResponse.map(m => m.join('.')).join(', ')
       }
       throw new ValidationError(errorMessage, missingRequest, missingResponse);
     }
@@ -35,13 +44,12 @@ export class ValidationService {
   private findMissing(provided: any, required: any, keyChain: KeyChain = []): Array<KeyChain> {
     let result = new Array<KeyChain>();
 
-    for (const key in required) {
-      if (typeof required[key] === "object" && !(required[key] instanceof Array)) {
-        result.push(...this.findMissing(provided[key], required[key], [...keyChain, key]));
-      } else {
-        if (provided === undefined || provided[key] === undefined) {
-          result.push([...keyChain, key]);
-        }
+    const providedKeys = Object.keys(flatten(provided));
+    const requiredKeys = Object.keys(flatten(required));
+
+    for(const requiredKey of requiredKeys) {
+      if(!providedKeys.includes(requiredKey)) {
+        result.push(requiredKey.split('.'));
       }
     }
 

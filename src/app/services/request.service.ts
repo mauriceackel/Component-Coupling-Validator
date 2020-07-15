@@ -15,13 +15,16 @@ export class RequestService {
 
   constructor(private httpClient: HttpClient, private apiService: ApiService) { }
 
-  public async sendRequest(sourceInputData: any, mapping: IMapping, targetInterface: IInterface) {
+  public async sendRequest(sourceInputData: any, mapping: IMapping, targetInterfaces: { [key: string]: IInterface }) {
 
     const targetInputData = jsonata(stringifyedToJsonata(mapping.requestMapping)).evaluate(sourceInputData);
 
-    const { method, url } = await getRequestUrl(targetInterface, targetInputData.parameters);
+    const response = {};
+    for(const [key, iface] of Object.entries(targetInterfaces)) {
+      const { method, url } = await getRequestUrl(iface, targetInputData[key].parameters);
 
-    const response = await this.httpClient.request<any>(method, url, { body: targetInputData.body, responseType: "json" }).toPromise();
+      response[key] = await this.httpClient.request<any>(method, url, { body: targetInputData[key].body, responseType: "json" }).toPromise();
+    }
 
     const sourceOutputData = jsonata(stringifyedToJsonata(mapping.responseMapping)).evaluate(response);
 

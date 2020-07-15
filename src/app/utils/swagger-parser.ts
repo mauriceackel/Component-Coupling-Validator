@@ -21,6 +21,10 @@ export async function getServer(api: IApi) {
   }
 }
 
+export async function getRequestUrls(ifaces: { [key: string]: IInterface }, paramValues: { [key: string]: { parameters: { [key: string]: string } } } = {}) {
+  return Promise.all(Object.entries(ifaces).map(([key, value]) => getRequestUrl(value, paramValues[key]?.parameters)));
+}
+
 export async function getRequestUrl(iface: IInterface, paramValues: { [key: string]: string } = {}) {
   const server = await getServer(iface.api);
   const { url, method, path, operation } = await getOperation(iface.api, iface.operationId);

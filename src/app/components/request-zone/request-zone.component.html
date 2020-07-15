@@ -1,7 +1,7 @@
 <ng-container>
   <div class="row">
     <div class="col">
-      Executing "{{method}}" request to {{server}}:
+      <p *ngFor="let enpoint of endpoints">Executing "{{enpoint.method}}" request to {{enpoint.url}}</p>
     </div>
   </div>
   <div class="row border-bottom">

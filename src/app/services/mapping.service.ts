@@ -7,6 +7,7 @@ import { IMapping, IMappingPair, MappingType } from '../models/mapping.model';
 import * as getinputs from '../utils/get-inputs/get-inputs';
 import { removeUndefined } from '../utils/remove-undefined';
 import { AuthenticationService } from './authentication.service';
+import { map } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -73,53 +74,6 @@ export class MappingService {
   }
 
   /**
-   * Find the shortest mapping chain between some mapping source and target
-   * @param sourceId The id of the source interface
-   * @param targetId The id of the target interface
-   */
-  public async findMappingChain(sourceId: string, targetId: string) {
-    const mappings = await this.getMappings({ type: MappingType.TRANSFORMATION });
-
-    return this.bfs(sourceId, targetId, mappings);
-  }
-
-  /**
-   * Performs a breadth first search on all mappings and returns a chain of mappings if there is a path from source to target. Else returns undefined.
-   * @param sourceId The id of the source interface
-   * @param targetId The id of the target interface
-   * @param mappings The mappings in which to search for a path from source to target
-   */
-  private bfs(sourceId: string, targetId: string, mappings: Array<IMapping>) {
-    const queue = new Array<Array<IMapping>>(); //Queue is an array of paths
-
-    //Push a dummy mapping as first element to get things going
-    queue.push([{ targetId: sourceId } as any]);
-
-    while (queue.length !== 0) {
-      //Get the path from the queue
-      const path = queue.pop();
-
-      //Get the last element from tht path. This is our mapping we need to check.
-      const mapping = path[path.length - 1]
-
-      if (mapping.targetId === targetId && path.length > 1) {
-        //Return the path, while removing dummy element
-        return path.slice(1);
-      }
-
-      const children = mappings.filter(m => m.sourceId === mapping.targetId);
-      for (const child of children) {
-        //If path already inclusdes this mapping, we are running into a loop here
-        if (!path.includes(child)) {
-          queue.push(new Array<IMapping>(...path, child));
-        }
-      }
-    }
-
-    return [];
-  }
-
-  /**
    * Creates a mapping based on the input parameters
    * @param source The source interface
    * @param target The target interface
@@ -127,7 +81,7 @@ export class MappingService {
    * @param responseMappingPairs The mapping pairs of the response (target->source)
    * @param type The type of this mapping
    */
-  public buildMapping(source: IInterface, target: IInterface, requestMappingPairs: Array<IMappingPair>, responseMappingPairs: Array<IMappingPair>, type: MappingType): IMapping {
+  public buildMapping(source: IInterface, targets: { [key: string]: IInterface }, requestMappingPairs: Array<IMappingPair>, responseMappingPairs: Array<IMappingPair>, type: MappingType): IMapping {
     const requestTransformation = this.mappingPairsToTrans(requestMappingPairs, MappingDirection.INPUT);
     const responseTransformation = this.mappingPairsToTrans(responseMappingPairs, MappingDirection.OUTPUT);
 
@@ -135,8 +89,8 @@ export class MappingService {
       id: undefined,
       createdBy: this.identificationService.User.uid,
       type: type,
-      sourceId: `${source.api.id}.${source.operationId}.${source.responseId}`,
-      targetId: `${target.api.id}.${target.operationId}.${target.responseId}`,
+      sourceId: `${source.api.id}${source.operationId}${source.responseId}`,
+      targetIds: Object.keys(targets),
       requestMapping: JSON.stringify(requestTransformation),
       responseMapping: JSON.stringify(responseTransformation)
     }
@@ -158,17 +112,60 @@ export class MappingService {
    * @param source The source interface
    * @param target The target interface
    */
-  public async buildMappingPairs(source: IInterface, target: IInterface): Promise<{ request: Array<IMappingPair>, response: Array<IMappingPair> }> {
-    const mappingChain = await this.findMappingChain(`${source.api.id}.${source.operationId}.${source.responseId}`, `${target.api.id}.${target.operationId}.${target.responseId}`);
+  public async buildMappingPairs(source: IInterface, targets: { [key: string]: IInterface }): Promise<{ request: Array<IMappingPair>, response: Array<IMappingPair> }> {
+    const mappingChains = await this.findMappingChains(`${source.api.id}${source.operationId}${source.responseId}`, Object.keys(targets));
 
-    if (!mappingChain || mappingChain.length === 0) return { request: [], response: [] }
+    if (mappingChains.length === 0) return { request: [], response: [] }
 
-    const resultingMapping = this.executeMappingChain(mappingChain);
+    const { requestMapping, responseMapping } = this.executeMappingChains(mappingChains);
 
     return {
-      request: this.transToMappingPairs(JSON.parse(resultingMapping.requestMapping), MappingDirection.INPUT),
-      response: this.transToMappingPairs(JSON.parse(resultingMapping.responseMapping), MappingDirection.OUTPUT)
+      request: this.transToMappingPairs(requestMapping, MappingDirection.INPUT),
+      response: this.transToMappingPairs(responseMapping, MappingDirection.OUTPUT)
     }
+  }
+
+  public async findMappingChains(sourceId: string, targetIds: string[]) {
+    const mappings = await this.getMappings({ type: MappingType.TRANSFORMATION });
+
+    const tree = { node: "ROOT", children: targetIds.map(id => this.treeSearch(sourceId, id, mappings)) };
+    const flatChains = this.flattenTree(tree).map(chain => chain.slice(1));
+
+    return flatChains;
+  }
+
+  private flattenTree(tree: { node: any, children?: any[] }, chain: Array<IMapping> = []): Array<Array<IMapping>> {
+    const result: Array<Array<IMapping>> = [];
+
+    if (tree.children) {
+      for (const child of tree.children) {
+        result.push(...this.flattenTree(child, [...chain, tree.node]))
+      }
+    } else if (tree.node === "SELF") {
+      //Only add mapping if it ends on a "SELF"-node, meaning that the target ids matched
+      result.push(chain);
+    }
+
+    return result;
+  }
+
+  private treeSearch(sourceId: string, targetId: string, mappings: Array<IMapping>, containedMappings: Array<IMapping> = []): any {
+    const result = [];
+
+    //Prevent circles
+    const source = mappings.find(m => m.sourceId === sourceId && !containedMappings.includes(m));
+    if (!source) return [];
+
+    for (const id of source.targetIds) {
+      if (id === targetId) {
+        result.push({ node: "SELF" });
+      } else {
+        const tmpResult = this.treeSearch(id, targetId, mappings, [...containedMappings, source]);
+        if (!Array.isArray(tmpResult)) result.push(tmpResult);
+      }
+    }
+
+    return { node: source, children: result };
   }
 
   /**
@@ -196,11 +193,32 @@ export class MappingService {
     return result;
   }
 
+  private executeMappingChains(mappingChains: Array<Array<IMapping>>): { requestMapping: object, responseMapping: object } {
+    const sortedByLength = mappingChains.sort((c1, c2) => c1.length - c2.length);
+
+    let requestMapping = {};
+    let responseMapping = {};
+
+    for (const mappingChain of sortedByLength) {
+      const { requestMapping: reqMap, responseMapping: resMap } = this.executeMappingChain(mappingChain);
+      requestMapping = {
+        ...flatten(reqMap),
+        ...requestMapping
+      }
+      responseMapping = {
+        ...flatten(resMap),
+        ...responseMapping
+      }
+    }
+
+    return { requestMapping: unflatten(requestMapping), responseMapping: unflatten(responseMapping) };
+  }
+
   /**
    * Executes a chain of mappings, resulting in a new mapping that maps from the source of the first mapping to the target of the last mapping
    * @param mappingChain The transitive chain of mappings
    */
-  private executeMappingChain(mappingChain: Array<IMapping>): IMapping {
+  private executeMappingChain(mappingChain: Array<IMapping>): { requestMapping: object, responseMapping: object } {
     const operators = ['=', '!', '+', '-', '*', '/', '>', '<', ' and ', ' or ', ' in ', '&', '%'];
 
     const [requestInput, ...requestChain] = new Array(...mappingChain);
@@ -229,13 +247,8 @@ export class MappingService {
     }, JSON.parse(responseInput.responseMapping));
 
     return {
-      id: undefined,
-      createdBy: undefined,
-      type: MappingType.AUTO,
-      sourceId: mappingChain[0].sourceId,
-      targetId: mappingChain[mappingChain.length - 1].targetId,
-      requestMapping: JSON.stringify(requestMapping),
-      responseMapping: JSON.stringify(responseMapping)
+      requestMapping,
+      responseMapping
     }
   }
 }

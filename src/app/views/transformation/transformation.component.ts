@@ -1,10 +1,10 @@
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { Component, OnDestroy, OnInit, ViewChild, EventEmitter } from '@angular/core';
+import { FormControl, FormGroup, Validators, FormArray } from '@angular/forms';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatExpansionPanel } from '@angular/material/expansion';
 import { ActivatedRoute, Router } from '@angular/router';
-import { merge, Subscription } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import { merge, Subscription, combineLatest, pipe } from 'rxjs';
+import { debounceTime, map, tap, switchMap } from 'rxjs/operators';
 import { IApi } from '~/app/models/api.model';
 import { IInterface } from '~/app/models/interface.model';
 import { IMappingPair, MappingType } from '~/app/models/mapping.model';
@@ -26,25 +26,25 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
   public apis: Array<IApi>;
 
+  public targets = new FormArray([]);
+
   public inputForm = new FormGroup({
     'mS': new FormControl(undefined, Validators.required),
     'mSO': new FormControl(undefined, Validators.required),
     'mSR': new FormControl(undefined, Validators.required),
-    'mT': new FormControl(undefined, Validators.required),
-    'mTO': new FormControl(undefined, Validators.required),
-    'mTR': new FormControl(undefined, Validators.required),
+    'targets': this.targets,
   });
 
   public mappingSource: IInterface;
-  public mappingTarget: IInterface;
+  public mappingTargets: { [key: string]: IInterface };
 
   public sourceOperations: Array<IOperationTemplate>;
-  public targetOperations: Array<IOperationTemplate>;
+  public targetOperations: Array<Array<IOperationTemplate>>;
 
   public sourceRequestBody: any;
   public sourceResponseBody: any;
-  public targetRequestBody: any;
-  public targetResponseBody: any;
+  public targetRequestBodies: any;
+  public targetResponseBodies: any;
 
   public requestMappingPairs: Array<IMappingPair>;
   public responseMappingPairs: Array<IMappingPair>;
@@ -61,7 +61,6 @@ export class TransformationComponent implements OnInit, OnDestroy {
     private adapterService: AdapterService,
     private validationService: ValidationService,
     private dialog: MatDialog,
-    private activatedRoute: ActivatedRoute,
     private taskService: TaskService,
     private router: Router
   ) { }
@@ -71,15 +70,15 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.responseMappingPairs = new Array<IMappingPair>();
 
     this.mappingSource = undefined;
-    this.mappingTarget = undefined;
+    this.mappingTargets = undefined;
 
     this.sourceOperations = [];
     this.targetOperations = [];
 
     this.sourceRequestBody = undefined;
     this.sourceResponseBody = undefined;
-    this.targetRequestBody = undefined;
-    this.targetResponseBody = undefined;
+    this.targetRequestBodies = undefined;
+    this.targetResponseBodies = undefined;
 
     this.apis = await this.apiService.getApis();
 
@@ -89,33 +88,58 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.subscriptions.push(sourceChanges.subscribe(async () => {
       const source = this.parseSource();
       this.mappingSource = source;
+
       if (source) {
-        this.sourceRequestBody = await getRequestSchema(source.api, { operationId: source.operationId, responseId: source.responseId });
-        this.sourceResponseBody = await getResponseSchema(source.api, { operationId: source.operationId, responseId: source.responseId });
+        this.sourceRequestBody = {
+          [`${source.api.id}${source.operationId}${source.responseId}`]: await getRequestSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
+        };
+        this.sourceResponseBody = {
+          [`${source.api.id}${source.operationId}${source.responseId}`]: await getResponseSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
+        };
       }
     }));
     this.subscriptions.push(this.inputForm.get('mS').valueChanges.subscribe(async (val: IApi) => this.sourceOperations = val && await getOperationTemplates(val)));
 
-    const targetChanges = merge(this.inputForm.get('mT').valueChanges, this.inputForm.get('mTO').valueChanges, this.inputForm.get('mTR').valueChanges).pipe(debounceTime(0));
-    this.subscriptions.push(targetChanges.subscribe(async () => {
-      const target = this.parseTarget();
-      this.mappingTarget = target;
-      if (target) {
-        this.targetRequestBody = await getRequestSchema(target.api, { operationId: target.operationId, responseId: target.responseId });
-        this.targetResponseBody = await getResponseSchema(target.api, { operationId: target.operationId, responseId: target.responseId });
-      }
-    }))
-    this.subscriptions.push(this.inputForm.get('mT').valueChanges.subscribe(async (val: IApi) => this.targetOperations = val && await getOperationTemplates(val)));
+    this.subscriptions.push(this.targets.valueChanges.subscribe(async () => {
+      const targets = this.parseTargets();
+      this.mappingTargets = targets;
 
-    this.subscriptions.push(this.activatedRoute.queryParams.subscribe(params => {
-      this.inputForm.get('mS').setValue(this.apis.find(i => i.id === params["sourceId"]));
-      this.inputForm.get('mT').setValue(this.apis.find(i => i.id === params["targetId"]));
-    }));
+      const request = {};
+      const response = {};
+
+      for (const [key, value] of Object.entries(targets || {})) {
+        request[key] = await getRequestSchema(value.api, { operationId: value.operationId, responseId: value.responseId })
+        response[key] = await getResponseSchema(value.api, { operationId: value.operationId, responseId: value.responseId })
+      }
+
+      this.targetRequestBodies = request;
+      this.targetResponseBodies = response;
+    }))
+
+    this.targets.clear();
+    this.addTarget();
   }
 
   public ngOnDestroy() {
     this.taskService.pauseTask();
     this.subscriptions.forEach(s => s.unsubscribe());
+  }
+
+  public addTarget() {
+    const group = new FormGroup({
+      'mT': new FormControl(undefined, Validators.required),
+      'mTO': new FormControl(undefined, Validators.required),
+      'mTR': new FormControl(undefined, Validators.required),
+      'operations': new FormControl([])
+    })
+    this.subscriptions.push(
+      group.get('mT').valueChanges.subscribe(async (val: IApi) => group.get('operations').setValue(val && await getOperationTemplates(val)))
+    )
+    this.targets.push(group);
+  }
+
+  public removeTarget(index: number) {
+    this.targets.removeAt(index);
   }
 
   private parseSource(): IInterface {
@@ -129,21 +153,24 @@ export class TransformationComponent implements OnInit, OnDestroy {
     }
   }
 
-  private parseTarget(): IInterface {
-    if (!(this.inputForm.get('mT').valid && this.inputForm.get('mTO').valid && this.inputForm.get('mTR').valid)) return undefined;
+  private parseTargets(): { [key: string]: IInterface } {
+    if (!(this.targets.valid)) return undefined;
 
-    const data = this.inputForm.value;
-    return {
-      api: data.mT,
-      operationId: data.mTO.operationId,
-      responseId: data.mTR
-    }
+    const targets = this.targets.value as Array<{ mT: IApi, mTO: IOperationTemplate, mTR: string }>;
+    return targets.reduce((obj, target) => ({
+      ...obj,
+      [`${target.mT.id}${target.mTO.operationId}${target.mTR}`]: {
+        api: target.mT,
+        operationId: target.mTO.operationId,
+        responseId: target.mTR
+      } as IInterface
+    }), {})
   }
 
   private async initializeMapping() {
     if (!this.inputForm.valid) return;
 
-    const { request, response } = await this.mappingService.buildMappingPairs(this.parseSource(), this.parseTarget());
+    const { request, response } = await this.mappingService.buildMappingPairs(this.parseSource(), this.parseTargets());
 
     this.requestMappingPairs.splice(0);
     this.requestMappingPairs.push(...request);
@@ -173,10 +200,10 @@ export class TransformationComponent implements OnInit, OnDestroy {
       }
 
       const source = this.parseSource();
-      const target = this.parseTarget();
-      const mapping = this.mappingService.buildMapping(source, target, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
+      const targets = this.parseTargets();
+      const mapping = this.mappingService.buildMapping(source, targets, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
 
-      await this.validationService.validateMapping(source, target, mapping);
+      await this.validationService.validateMapping(source, targets, mapping);
 
       this.mappingError = undefined;
       const downloadLink = await this.adapterService.createAdapter(mapping, AdapterType.JAVASCRIPT);
@@ -198,10 +225,10 @@ export class TransformationComponent implements OnInit, OnDestroy {
       }
 
       const source = this.parseSource();
-      const target = this.parseTarget();
-      const mapping = this.mappingService.buildMapping(source, target, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
+      const targets = this.parseTargets();
+      const mapping = this.mappingService.buildMapping(source, targets, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
 
-      await this.validationService.validateMapping(source, target, mapping);
+      await this.validationService.validateMapping(source, targets, mapping);
 
       this.mappingError = undefined;
       await this.mappingService.createMapping(mapping);

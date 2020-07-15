@@ -5,7 +5,7 @@ export interface IMapping {
   createdBy: string
   type: MappingType;
   sourceId: string //Id of IInterface
-  targetId: string
+  targetIds: string[]
   requestMapping: string //JSONata mapping
   responseMapping: string //JSONata mapping
 }
