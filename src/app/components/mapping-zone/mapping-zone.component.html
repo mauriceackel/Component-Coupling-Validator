@@ -11,7 +11,8 @@
         </div>
         <div class="col">
           <button mat-stroked-button color="primary" class="float-right btn-narrow" (click)="mapSelected()"
-            [disabled]="isRequest && selectedRight.length === 0 || !isRequest && selectedLeft.length === 0">Map selected</button>
+            [disabled]="isRequest && selectedRight.length === 0 || !isRequest && selectedLeft.length === 0">Map
+            selected</button>
         </div>
       </div>
     </div>
@@ -26,8 +27,8 @@
         <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
           <li class="mat-tree-node">
             <mat-icon></mat-icon>
-            <button mat-button [ngClass]="{'mat-accent': selectedLeft.includes(node)}" (click)="selectLeft(node)"
-              [disabled]="!isRequest && isMapped(node)">{{node.name}}</button>
+            <button mat-button class="btn-no-overflow" [ngClass]="{'mat-accent': selectedLeft.includes(node)}"
+              (click)="selectLeft(node)" [disabled]="!isRequest && isMapped(node)">{{node.name}}</button>
           </li>
         </mat-tree-node>
         <!-- Expandable nodes -->
@@ -37,7 +38,7 @@
               <mat-icon>
                 {{leftTreeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
               </mat-icon>
-              <button mat-button matTreeNodeToggle>{{node.name}}</button>
+              <button mat-button matTreeNodeToggle class="btn-no-overflow">{{node.name}}</button>
             </div>
             <ul [class.mat-tree-invisible]="!leftTreeControl.isExpanded(node)">
               <ng-container matTreeNodeOutlet></ng-container>
@@ -48,18 +49,23 @@
     </div>
     <div class="col-6">
       <div class="mapping-container">
-        <div (click)="openEditor(pair)" class="cursor-pointer mapping-pair m-2" [ngClass]="{'invalid': !pair.mappingCode}" *ngFor="let pair of mappingPairs">
+        <div (click)="openEditor(pair)" class="d-flex flex-wrap cursor-pointer mapping-pair m-2"
+          [ngClass]="{'invalid': !pair.mappingCode}" *ngFor="let pair of mappingPairs">
           <mat-icon class="remove-icon" (click)="removePair(pair)">
             remove_circle_outline
           </mat-icon>
 
-          <div class="d-flex flex-column mr-1">
-            <div *ngFor="let p of pair.provided">
+          <div class="d-flex flex-column mr-1 p-2 border border-white rounded">
+            <div *ngIf="pair.provided.length === 0">
+              {{pair.mappingCode}}
+            </div>
+            <div *ngFor="let p of pair.provided; let i = index">
               {{p | join:'.'}}
+              <ng-container *ngIf="i + 1 < pair.provided.length">,&nbsp;</ng-container>
             </div>
           </div>
-          <mat-icon>arrow_right_alt</mat-icon>
-          <div class="ml-1">
+          <mat-icon class="m-2">arrow_right_alt</mat-icon>
+          <div class="ml-1 p-2 border border-white rounded">
             {{pair.required | join:'.'}}
           </div>
         </div>
@@ -71,8 +77,8 @@
         <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
           <li class="mat-tree-node">
             <mat-icon></mat-icon>
-            <button mat-button [ngClass]="{'mat-accent': selectedRight.includes(node)}" (click)="selectRight(node)"
-              [disabled]="isRequest && isMapped(node)">{{node.name}}</button>
+            <button mat-button class="btn-no-overflow" [ngClass]="{'mat-accent': selectedRight.includes(node)}"
+              (click)="selectRight(node)" [disabled]="isRequest && isMapped(node)">{{node.name}}</button>
           </li>
         </mat-tree-node>
         <!-- Expandable nodes -->
@@ -82,7 +88,7 @@
               <mat-icon>
                 {{rightTreeControl.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
               </mat-icon>
-              <button mat-button matTreeNodeToggle>{{node.name}}</button>
+              <button mat-button matTreeNodeToggle class="btn-no-overflow">{{node.name}}</button>
             </div>
             <ul [class.mat-tree-invisible]="!rightTreeControl.isExpanded(node)">
               <ng-container matTreeNodeOutlet></ng-container>
