@@ -89,7 +89,7 @@ export class MappingService {
       id: undefined,
       createdBy: this.identificationService.User.uid,
       type: type,
-      sourceId: `${source.api.id}${source.operationId}${source.responseId}`,
+      sourceId: `${source.api.id}_${source.operationId}_${source.responseId}`,
       targetIds: Object.keys(targets),
       requestMapping: JSON.stringify(requestTransformation),
       responseMapping: JSON.stringify(responseTransformation)
@@ -113,7 +113,7 @@ export class MappingService {
    * @param target The target interface
    */
   public async buildMappingPairs(source: IInterface, targets: { [key: string]: IInterface }): Promise<{ request: Array<IMappingPair>, response: Array<IMappingPair> }> {
-    const mappingChains = await this.findMappingChains(`${source.api.id}${source.operationId}${source.responseId}`, Object.keys(targets));
+    const mappingChains = await this.findMappingChains(`${source.api.id}_${source.operationId}_${source.responseId}`, Object.keys(targets));
 
     if (mappingChains.length === 0) return { request: [], response: [] }
 

@@ -21,7 +21,7 @@ export class ValidationService {
     const missingRequest = this.findMissing(JSON.parse(mapping.requestMapping), targetRequestBodies);
 
     const sourceRequestBody = {
-      [`${srcApi.id}${srcOperation.operationId}${srcOperation.responseId}`]: await getResponseSchema(srcApi, srcOperation)
+      [`${srcApi.id}_${srcOperation.operationId}_${srcOperation.responseId}`]: await getResponseSchema(srcApi, srcOperation)
     }
     const missingResponse = this.findMissing(JSON.parse(mapping.responseMapping), sourceRequestBody);
 

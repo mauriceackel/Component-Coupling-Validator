@@ -11,105 +11,132 @@ import { camelcase } from "../utils/camelcase";
 import Zip from "adm-zip";
 
 export async function createAdapter(adapterType: AdapterType, mapping: IMapping): Promise<string> {
-    logger.info(`Trying to create adapter for type: ${adapterType}`);
+  logger.info(`Trying to create adapter for type: ${adapterType}`);
 
-    const adapterTypeKeys: string[] = Object.keys(AdapterType)
-    const adapterTypes: AdapterType[] = adapterTypeKeys.map((k) => AdapterType[k as keyof typeof AdapterType]);
-    if (!adapterTypes.includes(adapterType)) {
-        throw new Error("Unkown adapter type");
-    }
+  const adapterTypeKeys: string[] = Object.keys(AdapterType)
+  const adapterTypes: AdapterType[] = adapterTypeKeys.map((k) => AdapterType[k as keyof typeof AdapterType]);
+  if (!adapterTypes.includes(adapterType)) {
+    throw new Error("Unkown adapter type");
+  }
 
-    const [sourceApiId, sourceOperationId, sourceResponseId] = mapping.sourceId.split('.');
-    const [targetApiId, targetOperationId, targetResponseId] = mapping.targetId.split('.');
+  const [sourceApiId, sourceOperationId, sourceResponseId] = mapping.sourceId.split('_');
+  const sourceOperation = { apiId: sourceApiId, operationId: sourceOperationId, responseId: sourceResponseId };
 
-    logger.info(`Loading APIs`);
-    const [source, target] = await Promise.all([
-        ApiService.getApi(sourceApiId),
-        ApiService.getApi(targetApiId)
-    ]);
+  const targetOperations = mapping.targetIds.map(id => {
+    const [targetApiId, targetOperationId, targetResponseId] = id.split('_');
+    return { apiId: targetApiId, operationId: targetOperationId, responseId: targetResponseId };
+  });
 
-    const fileId = uuidv4();
-    const filePath = `${STORAGE_PATH}/${fileId}`;
+  logger.info(`Loading APIs`);
+  const [source, ...targets] = await Promise.all([
+    ApiService.getApi(sourceApiId),
+    ...targetOperations.map(api => ApiService.getApi(api.apiId))
+  ]);
 
-    logger.info(`Writing specs`);
-    fs.mkdirSync(filePath, { recursive: true });
+  const fileId = uuidv4();
+  const filePath = `${STORAGE_PATH}/${fileId}`;
 
-    fs.mkdirSync(`${filePath}/source/`);
-    fs.writeFileSync(`${filePath}/source/apiSpec.json`, source.openApiSpec);
-    fs.mkdirSync(`${filePath}/target/`);
-    fs.writeFileSync(`${filePath}/target/apiSpec.json`, target.openApiSpec);
+  logger.info(`Writing specs`);
+  fs.mkdirSync(filePath, { recursive: true });
 
-    logger.info(`Select adapter generator`);
-    switch (adapterType) {
-        case AdapterType.JAVASCRIPT: await createJavaScriptAdapter(filePath, mapping, source, sourceOperationId, target, targetOperationId); break;
-        default: throw new Error("Unkown adapter type");
-    }
+  fs.mkdirSync(`${filePath}/source/`);
+  fs.writeFileSync(`${filePath}/source/apiSpec.json`, source.openApiSpec);
 
-    //Create zip file
-    var zip = new Zip();
-    zip.addLocalFolder(filePath);
-    zip.writeZip(`${filePath}.zip`);
+  fs.mkdirSync(`${filePath}/targets/`);
+  for (const target of targets) {
+    fs.mkdirSync(`${filePath}/targets/${target.id}/`);
+    fs.writeFileSync(`${filePath}/targets/${target.id}/apiSpec.json`, target.openApiSpec);
+  }
 
-    return fileId;
+  logger.info(`Select adapter generator`);
+  switch (adapterType) {
+    case AdapterType.JAVASCRIPT: await createJavaScriptAdapter(filePath, mapping, sourceOperation, targetOperations); break;
+    default: throw new Error("Unkown adapter type");
+  }
+
+  //Create zip file
+  var zip = new Zip();
+  zip.addLocalFolder(filePath);
+  zip.writeZip(`${filePath}.zip`);
+
+  return fileId;
 }
 
-async function createJavaScriptAdapter(filePath: string, mapping: IMapping, source: IApi, sourceOperationId: string, target: IApi, targetOperationId: string) {
-    await generateOpenApiInterface('javascript-target', `${filePath}/target`, `operationId=${camelcase(targetOperationId)},usePromises=true,projectVersion=0.0.1`);
-    const { targetApiName, targetHasBody, targetBodyName, targetBodyRequired, targetOptions, targetHasOptional } = parseJavaScriptTarget(filePath);
+async function createJavaScriptAdapter(
+  filePath: string, mapping: IMapping,
+  sourceOperation: { apiId: string; operationId: string; responseId: string; },
+  targetOperations: { apiId: string; operationId: string; responseId: string; }[]
+) {
+  const responseMapping = Buffer.from(escapeQuote(stringifyedToJsonata(mapping.responseMapping))).toString('base64');
+  const requestMapping = Buffer.from(escapeQuote(stringifyedToJsonata(mapping.requestMapping))).toString('base64');
 
-    const responseMapping = Buffer.from(escapeQuote(stringifyedToJsonata(mapping.responseMapping))).toString('base64');
-    const requestMapping =  Buffer.from(escapeQuote(stringifyedToJsonata(mapping.requestMapping))).toString('base64');
+  const additionalParameters: string[] = [];
+  additionalParameters.push(`operationId=${camelcase(sourceOperation.operationId)}`);
+  additionalParameters.push(`sourceFullId=${sourceOperation.apiId}_${sourceOperation.operationId}_${sourceOperation.responseId}`);
+  additionalParameters.push(`requestMapping=${requestMapping}`);
+  additionalParameters.push(`responseMapping=${responseMapping}`);
+  additionalParameters.push(`usePromises=true`);
+  additionalParameters.push(`projectVersion=0.0.1`);
 
-    const additionalParameters: string[] = [];
-    additionalParameters.push(`operationId=${camelcase(sourceOperationId)}`);
-    if(targetApiName) additionalParameters.push(`targetApiName=${targetApiName}`);
-    if(targetOptions) additionalParameters.push(`targetOptions=${targetOptions.join('.')}`);
-    if(targetHasBody) additionalParameters.push(`targetHasBody=true`);
-    if(targetBodyName) additionalParameters.push(`targetBodyName=${targetBodyName}`);
-    if(targetHasOptional) additionalParameters.push(`targetHasOptional=true`);
-    additionalParameters.push(`requestMapping=${requestMapping}`);
-    additionalParameters.push(`responseMapping=${responseMapping}`);
-    additionalParameters.push(`usePromises=true`);
-    additionalParameters.push(`projectVersion=0.0.1`);
+  const targetInfos: string[] = [];
+  for (const target of targetOperations) {
+    const targetPath = `${filePath}/targets/${target.apiId}`;
 
+    await generateOpenApiInterface('javascript-target', targetPath, `operationId=${camelcase(target.operationId)},usePromises=true,projectVersion=0.0.1`);
+    const { targetApiName, targetHasBody, targetBodyName, targetBodyRequired, targetOptions, targetHasOptional } = parseJavaScriptTarget(targetPath);
 
-    await generateOpenApiInterface(
-        'javascript-adapter',
-        `${filePath}/source`,
-        additionalParameters.join(',')
-    );
+    const targetInfo: { [key: string]: string | boolean } = {
+      targetApiId: target.apiId,
+      targetFullId: `${target.apiId}_${target.operationId}_${target.responseId}`,
+      targetApiPath: `../../../targets/${target.apiId}`,
+      targetApiName
+    }
+    if (targetOptions) targetInfo.targetOptions = targetOptions.join('.');
+    if (targetHasBody) targetInfo.targetHasBody = true;
+    if (targetBodyName) targetInfo.targetBodyName = targetBodyName;
+    if (targetHasOptional) targetInfo.targetHasOptional = true;
+
+    targetInfos.push(Buffer.from(JSON.stringify(targetInfo)).toString('base64'));
+  }
+  additionalParameters.push(`targets=${targetInfos.join('.')}`);
+
+  await generateOpenApiInterface(
+    'javascript-adapter',
+    `${filePath}/source`,
+    additionalParameters.join(',')
+  );
 }
 
 function parseJavaScriptTarget(filePath: string): { targetApiName: string, targetHasBody: boolean, targetBodyName: string, targetBodyRequired: boolean, targetOptions: Array<string>, targetHasOptional: boolean } {
-    const targetApiFilePath = `${filePath}/target/parsed-target.txt`;
-    const targetApiFile = fs.readFileSync(targetApiFilePath, { encoding: "utf-8" });
+  const targetApiFilePath = `${filePath}/parsed-target.txt`;
+  const targetApiFile = fs.readFileSync(targetApiFilePath, { encoding: "utf-8" });
 
-    const [targetApiName, targetHasBody, targetBodyName, targetBodyRequired, targetOptions, targetHasOptional] = targetApiFile.split('\n');
+  const [targetApiName, targetHasBody, targetBodyName, targetBodyRequired, targetOptions, targetHasOptional] = targetApiFile.split('\n');
 
-    fs.unlinkSync(targetApiFilePath);
+  fs.unlinkSync(targetApiFilePath);
 
-    return {
-        targetApiName,
-        targetHasBody: targetHasBody === 'true',
-        targetBodyName,
-        targetBodyRequired: targetBodyRequired === 'true',
-        targetOptions: targetOptions.split(',').map(o => o.trim()).filter(o => o !== 'opts'),
-        targetHasOptional: targetHasOptional === 'true'
-    };
+  return {
+    targetApiName,
+    targetHasBody: targetHasBody === 'true',
+    targetBodyName,
+    targetBodyRequired: targetBodyRequired === 'true',
+    targetOptions: targetOptions.split(',').map(o => o.trim()).filter(o => o !== 'opts'),
+    targetHasOptional: targetHasOptional === 'true'
+  };
 }
 
 
 async function generateOpenApiInterface(generator: string, path: string, options?: string) {
-    const additionalOptions = options ? ` -p=${options}` : '';
-    const executable = "java -cp openapi-generator/javascript-adapter-openapi-generator-1.0.0.jar:openapi-generator/javascript-target-openapi-generator-1.0.0.jar:openapi-generator/openapi-generator-cli.jar org.openapitools.codegen.OpenAPIGenerator";
+  const additionalOptions = options ? ` -p=${options}` : '';
+  const executable = "java -cp openapi-generator/javascript-adapter-openapi-generator-1.0.0.jar:openapi-generator/javascript-target-openapi-generator-1.0.0.jar:openapi-generator/openapi-generator-cli.jar org.openapitools.codegen.OpenAPIGenerator";
 
-    const command = `${executable} generate -g ${generator} -i ${path}/apiSpec.json -o ${path}${additionalOptions}`;
+  const command = `${executable} generate -g ${generator} -i ${path}/apiSpec.json -o ${path}${additionalOptions}`;
 
-    return new Promise((resolve, reject) => {
-        const child = exec(command, (error, stdout, stderr) => console.log(error, stdout, stderr));
-        child.on('close', resolve);
-        child.on('error', reject);
-    })
+  return new Promise((resolve, reject) => {
+    const child = exec(command, (error, stdout, stderr) => console.log(error, stdout, stderr));
+    child.on('close', resolve);
+    child.on('error', reject);
+  })
 }
 
 /**
@@ -119,10 +146,10 @@ async function generateOpenApiInterface(generator: string, path: string, options
    * { "foo":"bar" } --> { "foo":bar }
    */
 export function stringifyedToJsonata(obj: string) {
-    const keyValueRegex = /(?:\"|\')([^"]*)(?:\"|\')(?=:)(?:\:\s*)(?:\"|\')?(true|false|(?:[^"]|\\\")*)(?:"(?=\s*(,|})))/g;
-    return obj.replace(keyValueRegex, '"$1":$2').replace(/\\\"/g, '"');
+  const keyValueRegex = /(?:\"|\')([^"]*)(?:\"|\')(?=:)(?:\:\s*)(?:\"|\')?(true|false|(?:[^"]|\\\")*)(?:"(?=\s*(,|})))/g;
+  return obj.replace(keyValueRegex, '"$1":$2').replace(/\\\"/g, '"');
 }
 
 function escapeQuote(input: string) {
-    return input.replace(/"/g, "\\\"")
+  return input.replace(/"/g, "\\\"")
 }

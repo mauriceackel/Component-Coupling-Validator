@@ -91,10 +91,10 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
       if (source) {
         this.sourceRequestBody = {
-          [`${source.api.id}${source.operationId}${source.responseId}`]: await getRequestSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
+          [`${source.api.id}_${source.operationId}_${source.responseId}`]: await getRequestSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
         };
         this.sourceResponseBody = {
-          [`${source.api.id}${source.operationId}${source.responseId}`]: await getResponseSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
+          [`${source.api.id}_${source.operationId}_${source.responseId}`]: await getResponseSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
         };
       }
     }));
@@ -159,7 +159,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
     const targets = this.targets.value as Array<{ mT: IApi, mTO: IOperationTemplate, mTR: string }>;
     return targets.reduce((obj, target) => ({
       ...obj,
-      [`${target.mT.id}${target.mTO.operationId}${target.mTR}`]: {
+      [`${target.mT.id}_${target.mTO.operationId}_${target.mTR}`]: {
         api: target.mT,
         operationId: target.mTO.operationId,
         responseId: target.mTR

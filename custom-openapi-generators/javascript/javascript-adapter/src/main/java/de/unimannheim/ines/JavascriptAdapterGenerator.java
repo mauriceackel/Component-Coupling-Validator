@@ -7,6 +7,10 @@ import io.swagger.v3.oas.models.OpenAPI;
 
 import java.util.*;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.JSONPObject;
+
 public class JavascriptAdapterGenerator extends JavascriptClientCodegen {
 
   /**
@@ -49,10 +53,25 @@ public class JavascriptAdapterGenerator extends JavascriptClientCodegen {
   public void preprocessOpenAPI(OpenAPI openAPI) {
     super.preprocessOpenAPI(openAPI);
 
-    if (additionalProperties.containsKey("targetOptions")) {
-      String[] targetOptions = additionalProperties.get("targetOptions").toString().split("\\.");
-      String serializedOptions = String.join(", ", targetOptions);
-      additionalProperties.put("targetOptions", serializedOptions);
+    if (additionalProperties.containsKey("targets")) {
+      String[] b64TargetInfos = additionalProperties.get("targets").toString().split("\\.");
+
+      ArrayList<Map<String, String>> targets = new ArrayList<>();
+
+      for (String b64TargetInfo : b64TargetInfos) {
+        byte[] decodedBytes = Base64.getDecoder().decode(b64TargetInfo);
+        String stringifiedTargetInfo = new String(decodedBytes);
+
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+          Map<String, String> targetInfo = mapper.readValue(stringifiedTargetInfo, Map.class);
+          targets.add(targetInfo);
+        } catch (JsonProcessingException e) {
+          e.printStackTrace();
+        }
+      }
+
+      additionalProperties.put("targets", targets);
     }
 
     if (additionalProperties.containsKey("requestMapping")) {

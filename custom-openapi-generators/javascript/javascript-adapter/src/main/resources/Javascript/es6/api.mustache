@@ -6,7 +6,9 @@ import ApiClient from "../ApiClient";
 </imports>
 <#containsOperation>
 import * as jsonata from 'jsonata';
-import { <targetApiName> as AdapterTargetApi, ApiClient as TargetApiClient } from '../../../target/src/index';
+<#targets>
+import { <targetApiName> as <targetApiId>TargetApi, ApiClient as <targetApiId>ApiClient } from '<targetApiPath>/src/index';
+</targets>
 </containsOperation>
 
 <#emitJSDoc>/**
@@ -81,25 +83,36 @@ export default class <&classname> {
       {{=< >=}}
 
       const parameters = { ...pathParams, ...queryParams, ...headerParams, ...formParams };
-      const inputData = { parameters, body: postBody };
-      const { parameters: targetParameters, body: targetBody } = await jsonata(requestMapping).evaluate(inputData);
+      const sourceInputData = { "<sourceFullId>": { parameters, body: postBody } };
+      const targetInputData = await jsonata(requestMapping).evaluate(sourceInputData);
 
-      async function callTarget(targetInput) {
-        const { <targetOptions><#targetHasOptional>, ...opts</targetHasOptional> } = targetInput;
+      const response = {};
 
-        const targetApiClient = new TargetApiClient();
-        const data = await new AdapterTargetApi(targetApiClient).controlLight(<targetOptions><#targetHasOptional>, opts</targetHasOptional>);
+      <#targets>
+      async function handle<targetApiId>() {
+        async function callTarget(targetInput) {
+          const { <targetOptions><#targetHasOptional>, ...opts</targetHasOptional> } = targetInput;
 
-        const result = await jsonata(responseMapping).evaluate(data);
-        return { data: result };
+          const targetApiClient = new <targetApiId>ApiClient();
+          const data = await new <targetApiId>TargetApi(targetApiClient).controlLight(<targetOptions><#targetHasOptional>, opts</targetHasOptional>);
+
+          return data;
+        }
+
+        const { parameters: targetParameters, body: targetBody } = targetInputData["<targetFullId>"];
+        <#targetHasBody>
+        response["<targetFullId>"] = await callTarget({...targetParameters, <targetBodyName>: targetBody});
+        </targetHasBody>
+        <^targetHasBody>
+        response["<targetFullId>"] = await callTarget(targetParameters);
+        </targetHasBody>
       }
+      </targets>
 
-      <#targetHasBody>
-      return await callTarget({...targetParameters, <targetBodyName>: targetBody});
-      </targetHasBody>
-      <^targetHasBody>
-      return await callTarget(targetParameters);
-      </targetHasBody>
+      await Promise.all([<#targets>handle<targetApiId>(), </targets>]);
+
+      const { "<sourceFullId>": sourceOutputData} = jsonata(responseMapping).evaluate(response);
+      return { data: sourceOutputData };
       </vendorExtensions.source>
       <^vendorExtensions.source>
       let authNames = [<#authMethods>'<name>'<#hasMore>, </hasMore></authMethods>];
