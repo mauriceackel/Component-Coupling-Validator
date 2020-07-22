@@ -18,5 +18,6 @@ export interface IMappingPair {
 
 export enum MappingType {
   TRANSFORMATION,
-  AUTO
+  AUTO,
+  REVERSE
 }

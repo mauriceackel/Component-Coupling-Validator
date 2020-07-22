@@ -7,7 +7,6 @@ import { IMapping, IMappingPair, MappingType } from '../models/mapping.model';
 import * as getinputs from '../utils/get-inputs/get-inputs';
 import { removeUndefined } from '../utils/remove-undefined';
 import { AuthenticationService } from './authentication.service';
-import { map } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -45,8 +44,14 @@ export class MappingService {
    * @param mapping
    */
   public async createMapping(mapping: IMapping) {
-    const id = this.firestore.createId();
-    return this.mappingColl.doc(id).set(this.serializeMapping(mapping));
+    const reverseMappings = this.buildReverseMappings(mapping);
+
+    console.log(reverseMappings);
+
+    return Promise.all([mapping, ...reverseMappings].map(m => {
+      const id = this.firestore.createId();
+      this.mappingColl.doc(id).set(this.serializeMapping(m));
+    }));
   }
 
   /**
@@ -94,6 +99,35 @@ export class MappingService {
       requestMapping: JSON.stringify(requestTransformation),
       responseMapping: JSON.stringify(responseTransformation)
     }
+  }
+
+  public buildReverseMappings(mapping: IMapping): Array<IMapping> {
+    return mapping.targetIds.map(targetId => ({
+      id: undefined,
+      sourceId: targetId,
+      targetIds: [mapping.sourceId],
+      createdBy: mapping.createdBy,
+      type: MappingType.REVERSE,
+      requestMapping: this.reverseTransformation(mapping.requestMapping),
+      responseMapping: this.reverseTransformation(mapping.responseMapping)
+    }));
+  }
+
+  private reverseTransformation(transformation: string): string {
+    const transformationObject: { [key: string]: string } = flatten(JSON.parse(transformation));
+
+    const reversedMapping = Object.entries(transformationObject).reduce((reversed, [key, value]) => {
+      const simple = value.match(/^(\w|\.)*$/g) && !(value === "true" || value === "false" || !Number.isNaN(Number.parseFloat(value)));
+      if(simple) {
+        return {
+          ...reversed,
+          [value]: key,
+        }
+      }
+      return reversed;
+    }, {});
+
+    return JSON.stringify(unflatten(reversedMapping));
   }
 
   /**
@@ -161,7 +195,7 @@ export class MappingService {
   }
 
   public async findMappingChains(sourceId: string, targetIds: string[]) {
-    const mappings = await this.getMappings({ type: MappingType.TRANSFORMATION });
+    const mappings = await this.getMappings();
 
     const tree = { node: "ROOT", children: targetIds.map(id => this.treeSearch(sourceId, id, mappings)) };
     const flatChains = this.flattenTree(tree).map(chain => chain.slice(1));
