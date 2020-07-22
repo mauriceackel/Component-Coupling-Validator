@@ -108,17 +108,18 @@ export class MappingService {
       targetIds: [mapping.sourceId],
       createdBy: mapping.createdBy,
       type: MappingType.REVERSE,
-      requestMapping: this.reverseTransformation(mapping.requestMapping),
-      responseMapping: this.reverseTransformation(mapping.responseMapping)
+      requestMapping: this.reverseTransformation([targetId, mapping.sourceId], mapping.requestMapping),
+      responseMapping: this.reverseTransformation([targetId, mapping.sourceId], mapping.responseMapping)
     }));
   }
 
-  private reverseTransformation(transformation: string): string {
+  private reverseTransformation(prefixes: string[], transformation: string): string {
     const transformationObject: { [key: string]: string } = flatten(JSON.parse(transformation));
 
     const reversedMapping = Object.entries(transformationObject).reduce((reversed, [key, value]) => {
+      const relevant = prefixes.some(p => key.startsWith(p)) && prefixes.some(p => value.startsWith(p));
       const simple = value.match(/^(\w|\.)*$/g) && !(value === "true" || value === "false" || !Number.isNaN(Number.parseFloat(value)));
-      if(simple) {
+      if (simple && relevant) {
         return {
           ...reversed,
           [value]: key,
