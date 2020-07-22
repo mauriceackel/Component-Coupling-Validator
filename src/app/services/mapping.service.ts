@@ -107,6 +107,41 @@ export class MappingService {
     }, {}));
   }
 
+  public buildSameMappingPairs(provided: any, required: any): Array<IMappingPair> {
+    const mappingPairs = new Map<string, IMappingPair>();
+
+    const flatProvided = flatten(provided);
+    const flatRequired = flatten(required);
+
+    for (const providedKey of Object.keys(flatProvided)) {
+      for (const requiredKey of Object.keys(flatRequired)) {
+        const unprefixedProvidedKey = providedKey.substr(providedKey.indexOf('.') + 1);
+        const unprefixedRequiredKey = requiredKey.substr(requiredKey.indexOf('.') + 1);
+
+        if (unprefixedProvidedKey === unprefixedRequiredKey) {
+          let mappingPair: IMappingPair;
+          if (mappingPairs.has(requiredKey)) {
+            const existingPair = mappingPairs.get(requiredKey);
+            mappingPair = {
+              mappingCode: "",
+              provided: [...existingPair.provided, providedKey.split('.')],
+              required: existingPair.required
+            }
+          } else {
+            mappingPair = {
+              mappingCode: providedKey,
+              provided: [providedKey.split('.')],
+              required: requiredKey.split('.')
+            }
+          }
+          mappingPairs.set(requiredKey, mappingPair);
+        }
+      }
+    }
+
+    return [...mappingPairs.values()];
+  }
+
   /**
    * Create mapping pairs based on a source and target interface, taking transitive chains into account
    * @param source The source interface

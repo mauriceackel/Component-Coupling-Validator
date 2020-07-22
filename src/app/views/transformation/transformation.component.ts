@@ -179,6 +179,24 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.responseMappingPairs.push(...response);
   }
 
+  mapSame(request: boolean) {
+    if (request) {
+      const mappingPairs = this.mappingService.buildSameMappingPairs(this.sourceRequestBody, this.targetRequestBodies);
+      mappingPairs.forEach(p => {
+        if(!this.requestMappingPairs.find(e => e.required.join('.') === p.required.join('.'))) {
+          this.requestMappingPairs.push(p);
+        }
+      })
+    } else {
+      const mappingPairs = this.mappingService.buildSameMappingPairs(this.targetResponseBodies, this.sourceResponseBody);
+      mappingPairs.forEach(p => {
+        if(!this.responseMappingPairs.find(e => e.required.join('.') === p.required.join('.'))) {
+          this.responseMappingPairs.push(p);
+        }
+      })
+    }
+  }
+
   public reset() {
     this.router.navigate([], {
       queryParams: {

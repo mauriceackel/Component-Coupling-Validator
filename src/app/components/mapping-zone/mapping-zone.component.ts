@@ -1,11 +1,12 @@
 import { NestedTreeControl } from '@angular/cdk/tree';
-import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { IMappingPair } from '~/app/models/mapping.model';
 import { arrayEquals } from '~/app/utils/array-utils';
 import { JsonTreeNode, JsonTreeService } from '../../services/jsontree.service';
 import { TransformationDialog } from '../transformation-dialog/transformation-dialog.component';
+import { MappingService } from '~/app/services/mapping.service';
 
 @Component({
   selector: 'app-mapping-zone',
@@ -23,6 +24,7 @@ export class MappingZoneComponent implements OnInit, OnChanges {
   @Input("rightData") public rightData: any;
 
   @Input("mappingPairs") public mappingPairs = new Array<IMappingPair>();
+  @Output("mapSame") public mapSame = new EventEmitter();
 
   public leftTreeControl = new NestedTreeControl<JsonTreeNode>(node => node.children);
   public leftDataSource = new MatTreeNestedDataSource<JsonTreeNode>();
