@@ -150,7 +150,7 @@
           </mat-expansion-panel-header>
 
           <div class="pt-2">
-            <app-request-zone leftHeading="Input Data" rightHeading="Output Data" [inputData]="sourceRequestBody"
+            <app-request-zone *ngIf="inputForm.valid" leftHeading="Input Data" rightHeading="Output Data" [inputData]="sourceRequestBody"
               [mappingSource]="mappingSource" [mappingTargets]="mappingTargets"
               [requestMappingPairs]="requestMappingPairs" [responseMappingPairs]="responseMappingPairs">
             </app-request-zone>

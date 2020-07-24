@@ -38,6 +38,7 @@ export class RequestZoneComponent implements OnInit, OnChanges {
   ) { }
 
   public ngOnInit() {
+    this.outputData = undefined;
   }
 
   public async ngOnChanges(changes: SimpleChanges) {
