@@ -89,9 +89,10 @@ async function createJavaScriptAdapter(
       targetApiId: target.apiId,
       targetFullId: `${target.apiId}_${target.operationId}_${target.responseId}`,
       targetApiPath: `../../../targets/${target.apiId}`,
-      targetApiName
+      targetApiName,
+      targetFunctionName: target.operationId,
     }
-    if (targetOptions) targetInfo.targetOptions = targetOptions.join('.');
+    if (targetOptions && targetOptions.length > 0) targetInfo.targetOptions = targetOptions.join(', ');
     if (targetHasBody) targetInfo.targetHasBody = true;
     if (targetBodyName) targetInfo.targetBodyName = targetBodyName;
     if (targetHasOptional) targetInfo.targetHasOptional = true;

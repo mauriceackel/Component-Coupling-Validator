@@ -91,10 +91,10 @@ export default class <&classname> {
       <#targets>
       async function handle<targetApiId>() {
         async function callTarget(targetInput) {
-          const { <targetOptions><#targetHasOptional>, ...opts</targetHasOptional> } = targetInput;
+          const { <targetOptions><#targetHasOptional><#targetOptions>, </targetOptions>...opts</targetHasOptional> } = targetInput;
 
           const targetApiClient = new <targetApiId>ApiClient();
-          const data = await new <targetApiId>TargetApi(targetApiClient).controlLight(<targetOptions><#targetHasOptional>, opts</targetHasOptional>);
+          const data = await new <targetApiId>TargetApi(targetApiClient).<targetFunctionName>(<targetOptions><#targetHasOptional><#targetOptions>, </targetOptions>opts</targetHasOptional>);
 
           return data;
         }
