@@ -8,6 +8,9 @@ import * as getinputs from '../utils/get-inputs/get-inputs';
 import { removeUndefined } from '../utils/remove-undefined';
 import { AuthenticationService } from './authentication.service';
 
+type Tree = { node: IMapping, children?: Tree[] };
+const operators = ['=', '!', '+', '-', '*', '/', '>', '<', ' and ', ' or ', ' in ', '&', '%'];
+
 @Injectable({
   providedIn: 'root'
 })
@@ -183,11 +186,19 @@ export class MappingService {
    * @param target The target interface
    */
   public async buildMappingPairs(source: IInterface, targets: { [key: string]: IInterface }): Promise<{ request: Array<IMappingPair>, response: Array<IMappingPair> }> {
-    const mappingChains = await this.findMappingChains(`${source.api.id}_${source.operationId}_${source.responseId}`, Object.keys(targets));
+    const sourceId = `${source.api.id}_${source.operationId}_${source.responseId}`;
+    const targetIds = Object.keys(targets);
 
-    if (mappingChains.length === 0) return { request: [], response: [] }
+    const mappings = await this.getMappings();
+    const mappingTrees = targetIds.map(id => this.treeSearch(sourceId, id, mappings)).reduce((flat, trees) => [...flat, ...trees], []);
 
-    const { requestMapping, responseMapping } = this.executeMappingChains(mappingChains);
+    let responseMapping = {};
+    let requestMapping = {};
+    for (const mappingTree of mappingTrees) {
+      const { requestMapping: reqMap, responseMapping: resMap } = this.executeMappingTree(mappingTree);
+      responseMapping = { ...responseMapping, ...resMap };
+      requestMapping = { ...requestMapping, ...reqMap };
+    }
 
     return {
       request: this.transToMappingPairs(requestMapping, MappingDirection.INPUT),
@@ -195,41 +206,19 @@ export class MappingService {
     }
   }
 
-  public async findMappingChains(sourceId: string, targetIds: string[]) {
-    const mappings = await this.getMappings();
+  private treeSearch(sourceId: string, finalTragetId: string, mappings: Array<IMapping>, containedApis: Array<string> = []): Tree[] {
+    const sources = mappings.filter(m => m.sourceId === sourceId && !containedApis.includes(sourceId));
 
-    const tree = { node: "ROOT", children: targetIds.map(id => this.treeSearch(sourceId, id, mappings)).reduce((agg, arr) => [...agg, ...arr], []) };
-    const flatChains = this.flattenTree(tree).map(chain => chain.slice(1));
-
-    return flatChains;
-  }
-
-  private flattenTree(tree: { node: any, children?: any[] }, chain: Array<IMapping> = []): Array<Array<IMapping>> {
-    const result: Array<Array<IMapping>> = [];
-
-    if (tree.children) {
-      for (const child of tree.children) {
-        result.push(...this.flattenTree(child, [...chain, tree.node]))
-      }
-    } else {
-      //Only add mapping if it has no children, meaning that the target ids matched
-      result.push([...chain, tree.node]);
-    }
-
-    return result;
-  }
-
-  private treeSearch(sourceId: string, finalTragetId: string, mappings: Array<IMapping>, containedMappings: Array<IMapping> = []): any {
-    const sources = mappings.filter(m => m.sourceId === sourceId && !containedMappings.includes(m));
-
-    const result = [];
-    for(const source of sources) {
-      for(const targetId of source.targetIds) {
-        if(targetId === finalTragetId) {
+    const result = new Array<Tree>();
+    for (const source of sources) {
+      for (const targetId of source.targetIds) {
+        if (targetId === finalTragetId) {
           result.push({ node: source });
         } else {
-          const children = this.treeSearch(targetId, finalTragetId, mappings, [...containedMappings, source])
-          result.push({node: source, children: children})
+          const children = this.treeSearch(targetId, finalTragetId, mappings, [...containedApis, sourceId])
+          if(children.length > 0) {
+            result.push({ node: source, children: children })
+          }
         }
       }
     }
@@ -262,64 +251,60 @@ export class MappingService {
     return result;
   }
 
-  private executeMappingChains(mappingChains: Array<Array<IMapping>>): { requestMapping: object, responseMapping: object } {
-    const sortedByLength = mappingChains.sort((c1, c2) => c1.length - c2.length);
+  private performMapping(input: any, mapping: any) {
+    const flatInput = flatten(input);
+    const inputKeys = Object.keys(flatInput);
+    const m: { [key: string]: string } = flatten(mapping);
+    for (const [key, value] of Object.entries(m)) {
+      m[key] = inputKeys.reduce((val, k) => val.replace(new RegExp(k, 'g'), operators.some(o => flatInput[k].includes(o)) ? `(${flatInput[k]})` : flatInput[k]), value);
+    }
+    return unflatten(m);
+  }
+
+  private executeMappingTree(mappingTree: Tree, requestInput?: any) {
+    const { node, children } = mappingTree;
 
     let requestMapping = {};
-    let responseMapping = {};
 
-    for (const mappingChain of sortedByLength) {
-      const { requestMapping: reqMap, responseMapping: resMap } = this.executeMappingChain(mappingChain);
-      requestMapping = {
-        ...flatten(reqMap),
-        ...requestMapping
-      }
-      responseMapping = {
-        ...flatten(resMap),
-        ...responseMapping
+    let newRequestInput = {};
+    let responseInput = {};
+
+    if (requestInput === undefined) {
+      //First step, pass own request mapping
+      newRequestInput = JSON.parse(node.requestMapping);
+    } else {
+      newRequestInput = this.performMapping(requestInput, JSON.parse(node.requestMapping));
+    }
+
+    //Combine all mappings of children, then apply mapping of "node"
+    for (const child of children) {
+      if (child.children) {
+        const result = this.executeMappingTree(child, newRequestInput);
+        responseInput = {
+          ...responseInput,
+          ...result.responseMapping
+        }
+        requestMapping = {
+          ...requestMapping,
+          ...result.requestMapping
+        }
+      } else {
+        //Use child mapping as input
+        responseInput = {
+          ...responseInput,
+          ...JSON.parse(child.node.responseMapping)
+        }
+        requestMapping = {
+          ...requestMapping,
+          ...this.performMapping(newRequestInput, JSON.parse(child.node.requestMapping))
+        }
       }
     }
 
-    return { requestMapping: unflatten(requestMapping), responseMapping: unflatten(responseMapping) };
+    const responseMapping = this.performMapping(responseInput, JSON.parse(node.responseMapping));
+    return { responseMapping, requestMapping };
   }
 
-  /**
-   * Executes a chain of mappings, resulting in a new mapping that maps from the source of the first mapping to the target of the last mapping
-   * @param mappingChain The transitive chain of mappings
-   */
-  private executeMappingChain(mappingChain: Array<IMapping>): { requestMapping: object, responseMapping: object } {
-    const operators = ['=', '!', '+', '-', '*', '/', '>', '<', ' and ', ' or ', ' in ', '&', '%'];
-
-    const [requestInput, ...requestChain] = new Array(...mappingChain);
-
-    const responseChain = new Array(...mappingChain);
-    const responseInput = responseChain.pop();
-
-    const requestMapping = requestChain.reduce((input, mapping) => {
-      const flatInput = flatten(input);
-      const inputKeys = Object.keys(flatInput);
-      const m: { [key: string]: string } = flatten(JSON.parse(mapping.requestMapping));
-      for (const [key, value] of Object.entries(m)) {
-        m[key] = inputKeys.reduce((val, k) => val.replace(new RegExp(k, 'g'), operators.some(o => flatInput[k].includes(o)) ? `(${flatInput[k]})` : flatInput[k]), value);
-      }
-      return unflatten(m);
-    }, JSON.parse(requestInput.requestMapping));
-
-    const responseMapping = responseChain.reduceRight((input, mapping) => {
-      const flatInput = flatten(input);
-      const inputKeys = Object.keys(flatInput);
-      const m: { [key: string]: string } = flatten(JSON.parse(mapping.responseMapping));
-      for (const [key, value] of Object.entries(m)) {
-        m[key] = inputKeys.reduce((val, k) => val.replace(new RegExp(k, 'g'), operators.some(o => flatInput[k].includes(o)) ? `(${flatInput[k]})` : flatInput[k]), value);
-      }
-      return unflatten(m);
-    }, JSON.parse(responseInput.responseMapping));
-
-    return {
-      requestMapping,
-      responseMapping
-    }
-  }
 }
 
 export enum MappingDirection {
