@@ -23,15 +23,15 @@ export class JsonEditorComponent implements AfterViewInit, OnChanges {
 
   constructor() {
     this.uuid = Math.floor(Math.random() * 100000000000) + "";
+  }
+
+  public ngAfterViewInit() {
     this.editorOptions = {
-      mode: 'code',
+      mode: this.disabled ? 'view' : 'code',
       enableSort: false,
       enableTransform: false,
       onChange: () => this.handleChange()
     }
-  }
-
-  public ngAfterViewInit() {
     this.jsonEditor = new JSONEditor(this.jsonEditorRef.nativeElement, this.editorOptions);
     this.jsonEditor.set(this.data || {});
   }
@@ -67,12 +67,6 @@ export class JsonEditorComponent implements AfterViewInit, OnChanges {
     } else {
       this.hasChanges = true;
       this.valid = false;
-    }
-  }
-
-  public handleKeyDown(event: KeyboardEvent) {
-    if(this.disabled) {
-      event.preventDefault();
     }
   }
 
