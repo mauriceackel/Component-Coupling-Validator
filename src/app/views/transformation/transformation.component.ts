@@ -263,6 +263,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
         this.mappingError = err;
         return;
       }
+      this.showErrorDialog();
       throw err;
     }
   }
@@ -275,6 +276,23 @@ export class TransformationComponent implements OnInit, OnDestroy {
       data: {
         title: "Mapping Success",
         content: "The mapping was successsfully created.",
+        buttons: [ButtonType.OK]
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
+      this.reset();
+    });
+  }
+
+  private showErrorDialog() {
+    const dialogRef: MatDialogRef<GenericDialog, void> = this.dialog.open(GenericDialog, {
+      position: {
+        top: "5%"
+      },
+      data: {
+        title: "Mapping Error",
+        content: "An error occured while saving the mapping. This is most likely because the already exists an identical mapping. However, if you keep experiencing this issue, please contact us.",
         buttons: [ButtonType.OK]
       }
     });

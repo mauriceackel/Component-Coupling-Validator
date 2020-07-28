@@ -7,6 +7,7 @@ import { IMapping, IMappingPair, MappingType } from '../models/mapping.model';
 import * as getinputs from '../utils/get-inputs/get-inputs';
 import { removeUndefined } from '../utils/remove-undefined';
 import { AuthenticationService } from './authentication.service';
+import createSha1Hash from '../utils/buildHash';
 
 type Tree = { node: IMapping, children?: Tree[] };
 const operators = ['=', '!', '+', '-', '*', '/', '>', '<', ' and ', ' or ', ' in ', '&', '%'];
@@ -49,11 +50,9 @@ export class MappingService {
   public async createMapping(mapping: IMapping) {
     const reverseMappings = this.buildReverseMappings(mapping);
 
-    console.log(reverseMappings);
-
-    return Promise.all([mapping, ...reverseMappings].map(m => {
-      const id = this.firestore.createId();
-      this.mappingColl.doc(id).set(this.serializeMapping(m));
+    return Promise.all([mapping, ...reverseMappings].map(async (m) => {
+      const id = await createSha1Hash(m.requestMapping + m.responseMapping);
+      return this.mappingColl.doc(id).set(this.serializeMapping(m));
     }));
   }
 

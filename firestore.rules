@@ -21,20 +21,6 @@ service cloud.firestore {
     	return request.auth.uid in get(/databases/$(database)/documents/roles/admin).data.members;
     }
 
-    match /interfaces/{interfaceId} {
-      // Everyone can read the interface descriptions
-      allow get, list: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-      							  isAdmin() ||
-      							  request.resource.data.name == resource.data.name &&
-      							  request.resource.data.method == resource.data.method &&
-      							  request.resource.data.endpoint == resource.data.endpoint &&
-      							  request.resource.data.request.body == resource.data.request.body &&
-      							  request.resource.data.response.body == resource.data.response.body
-                    );
-      allow create, delete: if isAdmin();
-    }
-
     match /apis/{interfaceId} {
       // Everyone can read the interface descriptions
       allow get, list: if isAuthenticated();
@@ -46,7 +32,7 @@ service cloud.firestore {
       // Everyone can read the mapping descriptions
       allow get, list: if isAuthenticated();
       allow create: if isAdmin() || matchesAuthId(request.resource.data.createdBy);
-      allow update, delete: if isAdmin() || matchesAuthId(resource.data.createdBy);
+      allow delete: if isAdmin() || matchesAuthId(resource.data.createdBy);
     }
 
     match /tasks/{taskId} {

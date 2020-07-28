@@ -32,7 +32,6 @@ export class AuthenticationService {
     try {
       await this.firebaseAuth.signInWithEmailAndPassword(email, password);
     } catch (err) {
-      console.log(err);
       switch(err.code) {
         case "auth/user-not-found": throw new AuthError("Invalid username or passsword"); break;
         case "auth/invalid-password": throw new AuthError("Invalid username or passsword"); break;
