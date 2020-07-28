@@ -198,7 +198,7 @@ export class MappingService {
   public async findMappingChains(sourceId: string, targetIds: string[]) {
     const mappings = await this.getMappings();
 
-    const tree = { node: "ROOT", children: targetIds.map(id => this.treeSearch(sourceId, id, mappings)) };
+    const tree = { node: "ROOT", children: targetIds.map(id => this.treeSearch(sourceId, id, mappings)).reduce((agg, arr) => [...agg, ...arr], []) };
     const flatChains = this.flattenTree(tree).map(chain => chain.slice(1));
 
     return flatChains;
@@ -211,31 +211,30 @@ export class MappingService {
       for (const child of tree.children) {
         result.push(...this.flattenTree(child, [...chain, tree.node]))
       }
-    } else if (tree.node === "SELF") {
-      //Only add mapping if it ends on a "SELF"-node, meaning that the target ids matched
-      result.push(chain);
+    } else {
+      //Only add mapping if it has no children, meaning that the target ids matched
+      result.push([...chain, tree.node]);
     }
 
     return result;
   }
 
-  private treeSearch(sourceId: string, targetId: string, mappings: Array<IMapping>, containedMappings: Array<IMapping> = []): any {
+  private treeSearch(sourceId: string, finalTragetId: string, mappings: Array<IMapping>, containedMappings: Array<IMapping> = []): any {
+    const sources = mappings.filter(m => m.sourceId === sourceId && !containedMappings.includes(m));
+
     const result = [];
-
-    //Prevent circles
-    const source = mappings.find(m => m.sourceId === sourceId && !containedMappings.includes(m));
-    if (!source) return [];
-
-    for (const id of source.targetIds) {
-      if (id === targetId) {
-        result.push({ node: "SELF" });
-      } else {
-        const tmpResult = this.treeSearch(id, targetId, mappings, [...containedMappings, source]);
-        if (!Array.isArray(tmpResult)) result.push(tmpResult);
+    for(const source of sources) {
+      for(const targetId of source.targetIds) {
+        if(targetId === finalTragetId) {
+          result.push({ node: source });
+        } else {
+          const children = this.treeSearch(targetId, finalTragetId, mappings, [...containedMappings, source])
+          result.push({node: source, children: children})
+        }
       }
     }
 
-    return { node: source, children: result };
+    return result;
   }
 
   /**
