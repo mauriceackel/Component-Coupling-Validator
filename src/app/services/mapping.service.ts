@@ -8,6 +8,7 @@ import * as getinputs from '../utils/get-inputs/get-inputs';
 import { removeUndefined } from '../utils/remove-undefined';
 import { AuthenticationService } from './authentication.service';
 import createSha1Hash from '../utils/buildHash';
+import { ValidationService } from './validation.service';
 
 type Tree = { node: IMapping, children?: Tree[] };
 const operators = ['=', '!', '+', '-', '*', '/', '>', '<', ' and ', ' or ', ' in ', '&', '%'];
@@ -19,8 +20,12 @@ export class MappingService {
 
   private mappingColl: AngularFirestoreCollection<IMapping>;
 
-  constructor(private identificationService: AuthenticationService, private firestore: AngularFirestore) {
-    this.mappingColl = firestore.collection('mappings');
+  constructor(
+    private identificationService: AuthenticationService,
+    private firestore: AngularFirestore,
+    private validationService: ValidationService
+  ) {
+    this.mappingColl = this.firestore.collection('mappings');
   }
 
   /**
@@ -103,6 +108,11 @@ export class MappingService {
     }
   }
 
+  /**
+   * Creates a symmetrical, "reverted" mapping for a mapping that is about to be stored in the database.
+   *
+   * @param mapping The mapping that should be reverted
+   */
   public buildReverseMappings(mapping: IMapping): Array<IMapping> {
     return mapping.targetIds.map(targetId => ({
       id: undefined,
@@ -115,12 +125,23 @@ export class MappingService {
     }));
   }
 
+  /**
+   * Creates a reversed mapping for a given JSONata mapping
+   *
+   * @param prefixes The relevant source and or target IDs, used to filter out mappings
+   * @param transformation The JSONata mapping that should be reverted
+   */
   private reverseTransformation(prefixes: string[], transformation: string): string {
+    //Flatten out the parsed JSONata transformation
     const transformationObject: { [key: string]: string } = flatten(JSON.parse(transformation));
 
+    //Loop over each entry in the JSONata mapping
     const reversedMapping = Object.entries(transformationObject).reduce((reversed, [key, value]) => {
+      //The mapping is only relevant if both that eky and the value side of the mapping refer to an API inside the prefixes
       const relevant = prefixes.some(p => key.startsWith(p)) && prefixes.some(p => value.startsWith(p));
+      //A mapping is only simple, if it containes no logic at all so it simply maps one key to another one
       const simple = value.match(/^(\w|\.)*$/g) && !(value === "true" || value === "false" || !Number.isNaN(Number.parseFloat(value)));
+      //We only revert mapping entries that are simpel and relevant
       if (simple && relevant) {
         return {
           ...reversed,
@@ -144,6 +165,12 @@ export class MappingService {
     }, {}));
   }
 
+  /**
+   * Function that builds mapping pairs for keys in provided and required that are identical
+   *
+   * @param provided The provided interface
+   * @param required The reuired interface
+   */
   public buildSameMappingPairs(provided: any, required: any): Array<IMappingPair> {
     const mappingPairs = new Map<string, IMappingPair>();
 
@@ -181,20 +208,25 @@ export class MappingService {
 
   /**
    * Create mapping pairs based on a source and target interface, taking transitive chains into account
+   *
    * @param source The source interface
-   * @param target The target interface
+   * @param targets The target interfaces
    */
   public async buildMappingPairs(source: IInterface, targets: { [key: string]: IInterface }): Promise<{ request: Array<IMappingPair>, response: Array<IMappingPair> }> {
     const sourceId = `${source.api.id}_${source.operationId}_${source.responseId}`;
     const targetIds = Object.keys(targets);
 
     const mappings = await this.getMappings();
+    //For each of the target APIs, create trees that start at the source API and end at the specific target API.
+    //Finally, flat-map all those trees into one array
     const mappingTrees = targetIds.map(id => this.treeSearch(sourceId, id, mappings)).reduce((flat, trees) => [...flat, ...trees], []);
 
     let responseMapping = {};
     let requestMapping = {};
+    //Now we build the final mappings by executing each identified mapping tree. The results get merged together into one request and response mapping.
+    //TODO: An early return might also need to break this loop
     for (const mappingTree of mappingTrees) {
-      const { requestMapping: reqMap, responseMapping: resMap } = this.executeMappingTree(mappingTree);
+      const { requestMapping: reqMap, responseMapping: resMap } = this.executeMappingTree(mappingTree, source, targets);
       responseMapping = { ...responseMapping, ...resMap };
       requestMapping = { ...requestMapping, ...reqMap };
     }
@@ -205,17 +237,34 @@ export class MappingService {
     }
   }
 
-  private treeSearch(sourceId: string, finalTragetId: string, mappings: Array<IMapping>, containedApis: Array<string> = []): Tree[] {
-    const sources = mappings.filter(m => m.sourceId === sourceId && !containedApis.includes(sourceId));
+  /**
+   * Finds all paths from a source API to a traget API and builds an acyclic tree as result.
+   *
+   * Restrictions: In each path, no vertex (i.e. API) is allowed to be visited twice.
+   * Implicit restriction: No edge (i.e. Mapping) is allowed to be visited twice (as a result of the prev. restriction)
+   *
+   * @param sourceId The ID of the starting API
+   * @param finalTragetId the ID of the target API
+   * @param mappings A list of all existing mappings
+   * @param visitedApis A list of APIs (i.e. vertices) that were already visited
+   */
+  private treeSearch(sourceId: string, finalTragetId: string, mappings: Array<IMapping>, visitedApis: Array<string> = []): Tree[] {
+    //From all mappings, get the ones that match the source ID and that have not yet been visited
+    const sources = mappings.filter(m => m.sourceId === sourceId && !visitedApis.includes(sourceId));
 
     const result = new Array<Tree>();
+    //This double loop makes it so that each 1:n mapping is treated somewhat like a 1:1 mapping
     for (const source of sources) {
       for (const targetId of source.targetIds) {
         if (targetId === finalTragetId) {
+          //If one target ID matches our final target API, we add the mapping without any children to the tree
           result.push({ node: source });
         } else {
-          const children = this.treeSearch(targetId, finalTragetId, mappings, [...containedApis, sourceId])
-          if(children.length > 0) {
+          //If the target ID does not yet match the final target, we execute the recursion step, resulting in a DFS
+          const children = this.treeSearch(targetId, finalTragetId, mappings, [...visitedApis, sourceId]);
+          //We only add a node to the final tree, if we have found any children that lead to the target. If not, we ignore this branch.
+          //This makes it so that in the final tree all leafs end in the target API
+          if (children.length > 0) {
             result.push({ node: source, children: children })
           }
         }
@@ -250,57 +299,96 @@ export class MappingService {
     return result;
   }
 
-  private performMapping(input: any, mapping: any) {
+  /**
+   * Marges two mappings into one (i.e. A -> B and B -> C become A -> C).
+   *
+   * Gets all keys from the input (i.e. some mapping). Filters out key which values include references to an API that is neither source nor target.
+   * Filtering is done to prevent having mappings that access keys from APIs other than the source or target(s).
+   * Afterwards, loops through all key of the mapping that should be altered. If a value includes any key from the input, this key is replaced by the value from the input.
+   *
+   * @param input The mapping from B -> C
+   * @param mapping The Mapping from A -> B
+   * @param sourceId The ID of the source API, required for filtering
+   * @param targetIds The IDs of all target APIs, required for filtering
+   *
+   * @returns A combined mapping from "mapping.source" to "input.target"
+   */
+  private performMapping(input: any, mapping: any, sourceId: string, targetIds: string[]) {
     const flatInput = flatten(input);
-    const inputKeys = Object.keys(flatInput);
+    //Filter out entries where the value refers to an API other than source or target
+    const inputKeys = Object.keys(flatInput).filter(key => {
+      const apiReferences = getinputs(`{"${key}": ${flatInput[key]}}`).getInputs({}) as string[];
+      return apiReferences.every(r => targetIds.some(tId => r.startsWith(tId)) || r.startsWith(sourceId));
+    });
+
     const m: { [key: string]: string } = flatten(mapping);
+    //For each entry in the mapping, try to replace a key from the input with a value from the input
     for (const [key, value] of Object.entries(m)) {
       m[key] = inputKeys.reduce((val, k) => val.replace(new RegExp(k, 'g'), operators.some(o => flatInput[k].includes(o)) ? `(${flatInput[k]})` : flatInput[k]), value);
     }
+
+    //Reconstruct the object before returning
     return unflatten(m);
   }
 
-  private executeMappingTree(mappingTree: Tree, requestInput?: any) {
+  /**
+   * Builds the final request and response mappings from the identified mapping tree.
+   *
+   * @param mappingTree The input mapping tree
+   * @param sourceId The ID of the source API, required for filtering
+   * @param targetIds The IDs of all target APIs, required for filtering
+   * @param requestInput The processed request mapping so far (required, as it needs to be passed downards the tree)
+   */
+  private executeMappingTree(mappingTree: Tree, source: IInterface, targets: { [key: string]: IInterface }, requestInput?: any) {
+    //TODO: Early return in execution when all required props are mapped
     const { node, children } = mappingTree;
 
+    //The request mapping that is passed back from the leafs to the root
     let requestMapping = {};
-
+    //The mapping that is created by applying the node's req Mapping on the input
     let newRequestInput = {};
-    let responseInput = {};
 
     if (requestInput === undefined) {
-      //First step, pass own request mapping
+      //If it is the first step and request input is undefined, we set the first request mapping as input
       newRequestInput = JSON.parse(node.requestMapping);
     } else {
-      newRequestInput = this.performMapping(requestInput, JSON.parse(node.requestMapping));
+      //If there is already a request input set, we apply the current mapping on the input
+      newRequestInput = this.performMapping(requestInput, JSON.parse(node.requestMapping), `${source.api.id}_${source.operationId}_${source.responseId}`, Object.keys(targets));
     }
 
-    //Combine all mappings of children, then apply mapping of "node"
+    //The combined input (i.e. mappings) from all children
+    if (children === undefined) {
+      //Current element is a leaf, so we use the response mapping as an input
+
+      //TODO: This could be a place for an early return
+      return { responseMapping: JSON.parse(node.responseMapping), requestMapping: newRequestInput };
+    }
+
+    let responseInput = {};
+    //Current element is not a leaf, so we continue the recursion
     for (const child of children) {
-      if (child.children) {
-        const result = this.executeMappingTree(child, newRequestInput);
-        responseInput = {
-          ...responseInput,
-          ...result.responseMapping
-        }
-        requestMapping = {
-          ...requestMapping,
-          ...result.requestMapping
-        }
-      } else {
-        //Use child mapping as input
-        responseInput = {
-          ...responseInput,
-          ...JSON.parse(child.node.responseMapping)
-        }
-        requestMapping = {
-          ...requestMapping,
-          ...this.performMapping(newRequestInput, JSON.parse(child.node.requestMapping))
-        }
+      const result = this.executeMappingTree(child, source, targets, newRequestInput);
+      //Once we get the result, we merge the values for response and request
+      responseInput = {
+        ...responseInput,
+        ...result.responseMapping
+      }
+      requestMapping = {
+        ...requestMapping,
+        ...result.requestMapping
       }
     }
 
-    const responseMapping = this.performMapping(responseInput, JSON.parse(node.responseMapping));
+    //Finally, we apply the current response mapping the the response input (i.e. the merged inputs from all children)
+    const responseMapping = this.performMapping(responseInput, JSON.parse(node.responseMapping), `${source.api.id}_${source.operationId}_${source.responseId}`, Object.keys(targets));
+
+    //TODO: This could be a place for an early return, but the validation has to be synchronous, i.e. by saving parsed in databse instead of parsing on demand
+    // this.validationService.validateMapping(source, targets, responseMapping);
+    // this.validationService.validateMapping(source, targets, responseMapping);
+    // if (fehltNixRequest && fehltNixResponse) {
+    //   return { responseMapping, requestMapping, break: true };
+    // }
+
     return { responseMapping, requestMapping };
   }
 
