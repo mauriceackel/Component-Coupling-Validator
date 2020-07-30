@@ -257,7 +257,6 @@ export class MappingService {
     const sourceResponseBody = await this.validationService.getSourceResponseBody(source);
     const targetRequestBodies = await this.validationService.getTargetRequestBodies(targets);
     //Now we build the final mappings by executing each identified mapping tree. The results get merged together into one request and response mapping.
-    //TODO: An early return might also need to break this loop
     this.count = 0;
     for (const mappingTree of mappingTrees) {
       const { requestMapping: reqMap, responseMapping: resMap, break: breakLoop } = this.executeMappingTree(mappingTree, source, targets, sourceResponseBody, targetRequestBodies);
