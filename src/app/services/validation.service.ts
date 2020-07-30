@@ -11,19 +11,30 @@ import { KeyChain } from './jsontree.service';
 })
 export class ValidationService {
 
-  public async validateMapping(source: IInterface, targets: { [key: string]: IInterface }, mapping: IMapping) {
+  public async getSourceResponseBody(source: IInterface) {
     const { api: srcApi, ...srcOperation } = source;
-
-    const targetRequestBodies = {};
-    for (const [key, value] of Object.entries(targets || {})) {
-      targetRequestBodies[key] = await getRequestSchema(value.api, { operationId: value.operationId, responseId: value.responseId }, true)
-    }
-    const missingRequest = this.findMissing(JSON.parse(mapping.requestMapping), targetRequestBodies);
-
-    const sourceRequestBody = {
+    return {
       [`${srcApi.id}_${srcOperation.operationId}_${srcOperation.responseId}`]: await getResponseSchema(srcApi, srcOperation)
     }
-    const missingResponse = this.findMissing(JSON.parse(mapping.responseMapping), sourceRequestBody);
+  }
+
+  public async getTargetRequestBodies(targets: { [key: string]: IInterface }) {
+    const schemaPromises = Object.entries(targets || {}).map(async ([key, value]) => ({key, schema: await getRequestSchema(value.api, { operationId: value.operationId, responseId: value.responseId }, true)}));
+    return (await Promise.all(schemaPromises)).reduce((obj, {key, schema}) => ({...obj, [key]: schema}), {});
+  }
+
+  public async validateMappingComplete(source: IInterface, targets: { [key: string]: IInterface }, mapping: IMapping) {
+    const [sourceResponseBody, targetRequestBodies] = await Promise.all([
+      this.getSourceResponseBody(source),
+      this.getTargetRequestBodies(targets)
+    ])
+
+    return this.validateMapping(mapping, sourceResponseBody, targetRequestBodies);
+  }
+
+  public validateMapping(mapping: IMapping, sourceResponseBody: any, targetRequestBodies: any) {
+    const missingRequest = this.findMissing(JSON.parse(mapping.requestMapping), targetRequestBodies);
+    const missingResponse = this.findMissing(JSON.parse(mapping.responseMapping), sourceResponseBody);
 
     if (missingRequest.length > 0 || missingResponse.length > 0) {
       let errorMessage = ""
@@ -41,7 +52,7 @@ export class ValidationService {
   }
 
   //Returns properties that are in required but not in provided
-  private findMissing(provided: any, required: any, keyChain: KeyChain = []): Array<KeyChain> {
+  public findMissing(provided: any, required: any, keyChain: KeyChain = []): Array<KeyChain> {
     let result = new Array<KeyChain>();
 
     const providedKeys = Object.keys(flatten(provided));

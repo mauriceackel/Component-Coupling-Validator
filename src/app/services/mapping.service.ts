@@ -21,6 +21,8 @@ export class MappingService {
 
   private mappingColl: AngularFirestoreCollection<IMapping>;
 
+  private count: number = 0;
+
   constructor(
     private identificationService: AuthenticationService,
     private firestore: AngularFirestore,
@@ -251,12 +253,17 @@ export class MappingService {
 
     let responseMapping = {};
     let requestMapping = {};
+
+    const sourceResponseBody = await this.validationService.getSourceResponseBody(source);
+    const targetRequestBodies = await this.validationService.getTargetRequestBodies(targets);
     //Now we build the final mappings by executing each identified mapping tree. The results get merged together into one request and response mapping.
     //TODO: An early return might also need to break this loop
+    this.count = 0;
     for (const mappingTree of mappingTrees) {
-      const { requestMapping: reqMap, responseMapping: resMap } = this.executeMappingTree(mappingTree, sourceId, targetIds, source, targets);
+      const { requestMapping: reqMap, responseMapping: resMap, break: breakLoop } = this.executeMappingTree(mappingTree, source, targets, sourceResponseBody, targetRequestBodies);
       responseMapping = { ...responseMapping, ...resMap };
       requestMapping = { ...requestMapping, ...reqMap };
+      if (breakLoop) break;
     }
 
     Object.keys(requestMapping).forEach(k => {
@@ -387,8 +394,7 @@ export class MappingService {
    * @param targetIds The IDs of all target APIs, required for filtering
    * @param requestInput The processed request mapping so far (required, as it needs to be passed downards the tree)
    */
-  private executeMappingTree(mappingTree: Tree, sourceId: string, targetIds: string[], source: IInterface, targets: { [key: string]: IInterface }, requestInput?: { [key: string]: string }) {
-    //TODO: Early return in execution when all required props are mapped
+  private executeMappingTree(mappingTree: Tree, source: IInterface, targets: { [key: string]: IInterface }, sourceResponseBody: object, targetRequestBodies: object, requestInput?: { [key: string]: string }) {
     const { node, children } = mappingTree;
 
     //The request mapping that is passed back from the leafs to the root
@@ -414,7 +420,10 @@ export class MappingService {
     let responseInput: { [key: string]: string } = {};
     //Current element is not a leaf, so we continue the recursion
     for (const child of children) {
-      const result = this.executeMappingTree(child, sourceId, targetIds, source, targets, newRequestInput);
+      const result = this.executeMappingTree(child, source, targets, sourceResponseBody, targetRequestBodies, newRequestInput);
+      if (result.break) {
+        return result;
+      }
       //Once we get the result, we merge the values for response and request
       responseInput = {
         ...responseInput,
@@ -429,12 +438,12 @@ export class MappingService {
     //Finally, we apply the current response mapping the the response input (i.e. the merged inputs from all children)
     const responseMapping = this.performResponseMapping(responseInput, node.responseMapping, node.responseMappingInputKeys);
 
-    //TODO: This could be a place for an early return, but the validation has to be synchronous, i.e. by saving parsed in databse instead of parsing on demand
-    // this.validationService.validateMapping(source, targets, responseMapping);
-    // this.validationService.validateMapping(source, targets, responseMapping);
-    // if (fehltNixRequest && fehltNixResponse) {
-    //   return { responseMapping, requestMapping, break: true };
-    // }
+    const requestMappingValid = this.validationService.findMissing(requestMapping, targetRequestBodies).length === 0;
+    const responseMappingValid = this.validationService.findMissing(responseMapping, sourceResponseBody).length === 0;
+    this.count++;
+    if (requestMappingValid && responseMappingValid) {
+      return { responseMapping, requestMapping, break: true };
+    }
 
     return { responseMapping, requestMapping };
   }

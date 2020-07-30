@@ -221,7 +221,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
       const targets = this.parseTargets();
       const mapping = this.mappingService.buildMapping(source, targets, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
 
-      await this.validationService.validateMapping(source, targets, mapping);
+      await this.validationService.validateMappingComplete(source, targets, mapping);
 
       this.mappingError = undefined;
       const downloadLink = await this.adapterService.createAdapter(mapping, AdapterType.JAVASCRIPT);
@@ -246,7 +246,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
       const targets = this.parseTargets();
       const mapping = this.mappingService.buildMapping(source, targets, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
 
-      await this.validationService.validateMapping(source, targets, mapping);
+      await this.validationService.validateMappingComplete(source, targets, mapping);
 
       this.mappingError = undefined;
       await this.mappingService.createMapping(mapping);

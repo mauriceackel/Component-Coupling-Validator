@@ -56,7 +56,7 @@ export class RequestZoneComponent implements OnInit, OnChanges {
   public async testRequest() {
     const mapping = this.mappingService.buildMapping(this.mappingSource, this.mappingTargets, this.requestMappingPairs, this.responseMappingPairs, MappingType.AUTO);
     try {
-      await this.validationService.validateMapping(this.mappingSource, this.mappingTargets, mapping);
+      await this.validationService.validateMappingComplete(this.mappingSource, this.mappingTargets, mapping);
       this.mappingError = undefined;
 
       const targetInputData = jsonata(stringifyedToJsonata(mapping.requestMapping)).evaluate(this.currentInputData);
