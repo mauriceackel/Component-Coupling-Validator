@@ -16,6 +16,9 @@ import { ValidationError } from '~/app/utils/errors/validation-error';
 import { ButtonType, GenericDialog } from '~/app/utils/generic-dialog/generic-dialog.component';
 import { getOperationTemplates, getRequestSchema, getResponseSchema, IOperationTemplate } from '~/app/utils/swagger-parser';
 import { AdapterService, AdapterType } from '~/app/services/adapter.service';
+import { Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { ComponentPortal } from '@angular/cdk/portal';
+import { MatSpinner } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-transformation',
@@ -54,6 +57,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
   private subscriptions = new Array<Subscription>();
 
   @ViewChild(MatExpansionPanel) testRequest: MatExpansionPanel;
+  private spinnerRef: OverlayRef = this.cdkSpinnerCreate();
 
   constructor(
     private apiService: ApiService,
@@ -62,7 +66,8 @@ export class TransformationComponent implements OnInit, OnDestroy {
     private validationService: ValidationService,
     private dialog: MatDialog,
     private taskService: TaskService,
-    private router: Router
+    private router: Router,
+    private overlay: Overlay
   ) { }
 
   public async ngOnInit() {
@@ -167,8 +172,29 @@ export class TransformationComponent implements OnInit, OnDestroy {
     }), {})
   }
 
+  private cdkSpinnerCreate() {
+    return this.overlay.create({
+      hasBackdrop: true,
+      backdropClass: 'dark-backdrop',
+      positionStrategy: this.overlay.position()
+        .global()
+        .centerHorizontally()
+        .centerVertically()
+    })
+  }
+
+  showSpinner() {
+    this.spinnerRef.attach(new ComponentPortal(MatSpinner))
+  }
+
+  stopSpinner() {
+    this.spinnerRef.detach();
+  }
+
   private async initializeMapping() {
     if (!this.inputForm.valid) return;
+
+    this.showSpinner();
 
     const { request, response } = await this.mappingService.buildMappingPairs(this.parseSource(), this.parseTargets());
 
@@ -177,20 +203,22 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
     this.responseMappingPairs.splice(0);
     this.responseMappingPairs.push(...response);
+
+    this.stopSpinner();
   }
 
   mapSame(request: boolean) {
     if (request) {
       const mappingPairs = this.mappingService.buildSameMappingPairs(this.sourceRequestBody, this.targetRequestBodies);
       mappingPairs.forEach(p => {
-        if(!this.requestMappingPairs.find(e => e.required.join('.') === p.required.join('.'))) {
+        if (!this.requestMappingPairs.find(e => e.required.join('.') === p.required.join('.'))) {
           this.requestMappingPairs.push(p);
         }
       })
     } else {
       const mappingPairs = this.mappingService.buildSameMappingPairs(this.targetResponseBodies, this.sourceResponseBody);
       mappingPairs.forEach(p => {
-        if(!this.responseMappingPairs.find(e => e.required.join('.') === p.required.join('.'))) {
+        if (!this.responseMappingPairs.find(e => e.required.join('.') === p.required.join('.'))) {
           this.responseMappingPairs.push(p);
         }
       })

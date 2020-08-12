@@ -14,6 +14,8 @@ import { GenericDialogModule } from '~/app/utils/generic-dialog/generic-dialog.m
 import { FilterPipeModule } from '~/app/utils/pipes/filter.pipe';
 import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
 import { TransformationComponent } from './transformation.component';
+import { OverlayModule } from '@angular/cdk/overlay';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @NgModule({
   declarations: [
@@ -33,7 +35,9 @@ import { TransformationComponent } from './transformation.component';
     MatExpansionModule,
     GenericDialogModule,
     RequestZoneModule,
-    FilterPipeModule
+    FilterPipeModule,
+    OverlayModule,
+    MatProgressSpinnerModule
   ],
   exports: [
     TransformationComponent

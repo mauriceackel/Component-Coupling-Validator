@@ -35,6 +35,11 @@ mat-expansion-panel-header mat-panel-title {
   color: mat-contrast($app-primary, 700) !important;
 }
 
+.cdk-overlay-backdrop.cdk-overlay-backdrop-showing.dark-backdrop {
+  background: #000;
+  opacity: 0.75 !important;
+}
+
 .mat-expansion-indicator::after {
   color: mat-contrast($app-primary, 700) !important;
 }
