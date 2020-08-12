@@ -1,10 +1,10 @@
-import { Component, OnDestroy, OnInit, ViewChild, EventEmitter } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, Validators, FormArray } from '@angular/forms';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatExpansionPanel } from '@angular/material/expansion';
-import { ActivatedRoute, Router } from '@angular/router';
-import { merge, Subscription, combineLatest, pipe } from 'rxjs';
-import { debounceTime, map, tap, switchMap } from 'rxjs/operators';
+import { Router } from '@angular/router';
+import { merge, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { IApi } from '~/app/models/api.model';
 import { IInterface } from '~/app/models/interface.model';
 import { IMappingPair, MappingType } from '~/app/models/mapping.model';
@@ -18,7 +18,7 @@ import { getOperationTemplates, getRequestSchema, getResponseSchema, IOperationT
 import { AdapterService, AdapterType } from '~/app/services/adapter.service';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
-import { MatSpinner } from '@angular/material/progress-spinner';
+import { ProgressIndicatorComponent } from '~/app/components/progress-indicator/progress-indicator.component';
 
 @Component({
   selector: 'app-transformation',
@@ -184,7 +184,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
   }
 
   showSpinner() {
-    this.spinnerRef.attach(new ComponentPortal(MatSpinner))
+    this.spinnerRef.attach(new ComponentPortal(ProgressIndicatorComponent))
   }
 
   stopSpinner() {

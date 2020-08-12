@@ -15,7 +15,7 @@ import { FilterPipeModule } from '~/app/utils/pipes/filter.pipe';
 import { JoinPipeModule } from '~/app/utils/pipes/join.pipe';
 import { TransformationComponent } from './transformation.component';
 import { OverlayModule } from '@angular/cdk/overlay';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ProgressIndicatorModule } from '~/app/components/progress-indicator/progress-indicator.module';
 
 @NgModule({
   declarations: [
@@ -37,7 +37,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     RequestZoneModule,
     FilterPipeModule,
     OverlayModule,
-    MatProgressSpinnerModule
+    ProgressIndicatorModule
   ],
   exports: [
     TransformationComponent
