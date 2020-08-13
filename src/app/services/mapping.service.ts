@@ -21,8 +21,6 @@ export class MappingService {
 
   private mappingColl: AngularFirestoreCollection<IMapping>;
 
-  private count: number = 0;
-
   constructor(
     private identificationService: AuthenticationService,
     private firestore: AngularFirestore,
@@ -220,14 +218,27 @@ export class MappingService {
     const targetIds = Object.keys(targets);
 
     const mappings: ParsedMapping[] = (await this.getMappings()).map(m => {
-      const requestMapping = flatten(JSON.parse(m.requestMapping));
-      const requestMappingInputKeys = Object.entries(requestMapping).reduce((obj, [key, value]) => ({
+      const flatRequestMapping: { [key: string]: string } = flatten(JSON.parse(m.requestMapping))
+      const requestMapping = Object.entries(flatRequestMapping).reduce((obj, [key, value]) => {
+        return {
+          ...obj,
+          [key]: operators.some(o => value.includes(o)) ? `(${value})` : value
+        }
+      }, {});
+      const requestMappingInputKeys = Object.entries(flatRequestMapping).reduce((obj, [key, value]) => ({
         ...obj,
         [key]: getinputs(`{"${key}": ${value}}`).getInputs({}) as string[]
       }), {});
 
-      const responseMapping = flatten(JSON.parse(m.responseMapping));
-      const responseMappingInputKeys = Object.entries(responseMapping).reduce((obj, [key, value]) => ({
+
+      const flatResponseMapping: { [key: string]: string } = flatten(JSON.parse(m.responseMapping));
+      const responseMapping = Object.entries(flatResponseMapping).reduce((obj, [key, value]) => {
+        return {
+          ...obj,
+          [key]: operators.some(o => value.includes(o)) ? `(${value})` : value
+        }
+      }, {});
+      const responseMappingInputKeys = Object.entries(flatResponseMapping).reduce((obj, [key, value]) => ({
         ...obj,
         [key]: getinputs(`{"${key}": ${value}}`).getInputs({}) as string[]
       }), {})
@@ -257,16 +268,16 @@ export class MappingService {
     const sourceResponseBody = await this.validationService.getSourceResponseBody(source);
     const targetRequestBodies = await this.validationService.getTargetRequestBodies(targets);
     //Now we build the final mappings by executing each identified mapping tree. The results get merged together into one request and response mapping.
-    this.count = 0;
     for (const mappingTree of mappingTrees) {
-      const { requestMapping: reqMap, responseMapping: resMap, break: breakLoop } = this.executeMappingTree(mappingTree, source, targets, sourceResponseBody, targetRequestBodies);
+      const { requestMapping: reqMap, responseMapping: resMap, break: breakLoop } = this.executeMappingTree(mappingTree, sourceResponseBody, targetRequestBodies);
       responseMapping = { ...responseMapping, ...resMap };
       requestMapping = { ...requestMapping, ...reqMap };
       if (breakLoop) break;
     }
 
+    //Clean request mapping so that it does not contain any references to APIs other than the targets
     Object.keys(requestMapping).forEach(k => {
-      if(!targetIds.some(tId => k.startsWith(tId))) {
+      if (!targetIds.some(tId => k.startsWith(tId))) {
         delete requestMapping[k];
       }
     })
@@ -357,6 +368,8 @@ export class MappingService {
    */
   private performResponseMapping(input: { [key: string]: string }, mapping: { [key: string]: string }, mappingInputKeys: { [key: string]: string[] }) {
     const inputKeys = Object.keys(input);
+    const regex = new RegExp(inputKeys.join('|'), 'g');
+
     const result: { [key: string]: string } = {};
 
     //For each entry in the mapping, try to replace a key from the input with a value from the input
@@ -365,8 +378,8 @@ export class MappingService {
       if (!mappingInputKeys[key].every(k => inputKeys.includes(k))) {
         continue;
       }
-      //TODO: This is too processor heavy -> improve performance
-      result[key] = inputKeys.reduce((val, k) => val.replace(new RegExp(k, 'g'), operators.some(o => input[k].includes(o)) ? `(${input[k]})` : input[k]), value);
+
+      result[key] = value.replace(regex, (match) => input[match]);
     }
 
     return result;
@@ -374,12 +387,13 @@ export class MappingService {
 
   private performRequestMapping(input: { [key: string]: string }, mapping: { [key: string]: string }) {
     const inputKeys = Object.keys(input);
+    const regex = new RegExp(inputKeys.join('|'), 'g');
+
     const result: { [key: string]: string } = {};
 
-    //TODO: This is too processor heavy -> improve performance
     //For each entry in the mapping, try to replace a key from the input with a value from the input
     for (const [key, value] of Object.entries(mapping)) {
-      result[key] = inputKeys.reduce((val, k) => val.replace(new RegExp(k, 'g'), operators.some(o => input[k].includes(o)) ? `(${input[k]})` : input[k]), value);
+      result[key] = value.replace(regex, (match) => input[match]);
     }
 
     return result;
@@ -393,7 +407,7 @@ export class MappingService {
    * @param targetIds The IDs of all target APIs, required for filtering
    * @param requestInput The processed request mapping so far (required, as it needs to be passed downards the tree)
    */
-  private executeMappingTree(mappingTree: Tree, source: IInterface, targets: { [key: string]: IInterface }, sourceResponseBody: object, targetRequestBodies: object, requestInput?: { [key: string]: string }) {
+  private executeMappingTree(mappingTree: Tree, sourceResponseBody: object, targetRequestBodies: object, requestInput?: { [key: string]: string }) {
     const { node, children } = mappingTree;
 
     //The request mapping that is passed back from the leafs to the root
@@ -419,7 +433,7 @@ export class MappingService {
     let responseInput: { [key: string]: string } = {};
     //Current element is not a leaf, so we continue the recursion
     for (const child of children) {
-      const result = this.executeMappingTree(child, source, targets, sourceResponseBody, targetRequestBodies, newRequestInput);
+      const result = this.executeMappingTree(child, sourceResponseBody, targetRequestBodies, newRequestInput);
       if (result.break) {
         return result;
       }
@@ -439,12 +453,8 @@ export class MappingService {
 
     const requestMappingValid = this.validationService.findMissing(requestMapping, targetRequestBodies).length === 0;
     const responseMappingValid = this.validationService.findMissing(responseMapping, sourceResponseBody).length === 0;
-    this.count++;
-    if (requestMappingValid && responseMappingValid) {
-      return { responseMapping, requestMapping, break: true };
-    }
 
-    return { responseMapping, requestMapping };
+    return { responseMapping, requestMapping, break: requestMappingValid && responseMappingValid };
   }
 
 }
