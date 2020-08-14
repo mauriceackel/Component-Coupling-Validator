@@ -12,7 +12,7 @@ import { ValidationService } from './validation.service';
 
 type Tree = { node: ParsedMapping, children?: Tree[] };
 type ParsedMapping = Omit<IMapping, "requestMapping" | "responseMapping"> & { requestMapping: { [key: string]: string }, requestMappingInputKeys: { [key: string]: string[] }, responseMapping: { [key: string]: string }, responseMappingInputKeys: { [key: string]: string[] } }
-const operators = ['=', '!', '+', '-', '*', '/', '>', '<', ' and ', ' or ', ' in ', '&', '%'];
+const operatorsRegex = /=|!|\+|-|\*|\/|>|<|\sand\s|\sor\s|\sin\s|&|%/g;
 
 @Injectable({
   providedIn: 'root'
@@ -217,70 +217,87 @@ export class MappingService {
     const sourceId = `${source.api.id}_${source.operationId}_${source.responseId}`;
     const targetIds = Object.keys(targets);
 
-    const mappings: ParsedMapping[] = (await this.getMappings()).map(m => {
-      const flatRequestMapping: { [key: string]: string } = flatten(JSON.parse(m.requestMapping))
-      const requestMapping = Object.entries(flatRequestMapping).reduce((obj, [key, value]) => {
-        return {
-          ...obj,
-          [key]: operators.some(o => value.includes(o)) ? `(${value})` : value
-        }
-      }, {});
-      const requestMappingInputKeys = Object.entries(flatRequestMapping).reduce((obj, [key, value]) => ({
-        ...obj,
-        [key]: getinputs(`{"${key}": ${value}}`).getInputs({}) as string[]
-      }), {});
+    const mappings: { [key: string]: ParsedMapping[] } = (await this.getMappings()).reduce((obj, m) => {
+      const flatRequestMapping: { [key: string]: string } = flatten(JSON.parse(m.requestMapping));
+
+      const requestMapping = {};
+      const requestMappingInputKeys = {};
+      for (const key in flatRequestMapping) {
+        const value = flatRequestMapping[key];
+        requestMapping[key] = operatorsRegex.test(value) ? `(${value})` : value;
+        requestMappingInputKeys[key] = getinputs(`{"${key}": ${value}}`).getInputs({}) as string[];
+      }
 
 
       const flatResponseMapping: { [key: string]: string } = flatten(JSON.parse(m.responseMapping));
-      const responseMapping = Object.entries(flatResponseMapping).reduce((obj, [key, value]) => {
-        return {
-          ...obj,
-          [key]: operators.some(o => value.includes(o)) ? `(${value})` : value
-        }
-      }, {});
-      const responseMappingInputKeys = Object.entries(flatResponseMapping).reduce((obj, [key, value]) => ({
-        ...obj,
-        [key]: getinputs(`{"${key}": ${value}}`).getInputs({}) as string[]
-      }), {})
-      if (m.targetIds.some(tId => targetIds.includes(tId))) {
-        Object.keys(responseMapping).forEach(k => {
-          if (!responseMappingInputKeys[k].every(reference => targetIds.some(tK => reference.startsWith(tK)))) {
-            delete responseMapping[k];
+
+      const responseMapping = {};
+      const responseMappingInputKeys = {};
+
+      const mappingPointsToTarget = targetIds.some(tId => m.targetIds.includes(tId));
+      if (mappingPointsToTarget) {
+        for (const key in flatResponseMapping) {
+          const value = flatResponseMapping[key];
+          const inputs = getinputs(`{"${key}": ${value}}`).getInputs({}) as string[];
+
+          responseMappingInputKeys[key] = inputs;
+
+          if (inputs.every(input => targetIds.some(tId => input.indexOf(tId) === 0))) {
+            responseMapping[key] = operatorsRegex.test(value) ? `(${value})` : value;
           }
-        })
+        }
+      } else {
+        for (const key in flatResponseMapping) {
+          const value = flatResponseMapping[key];
+          responseMappingInputKeys[key] = getinputs(`{"${key}": ${value}}`).getInputs({}) as string[];
+          responseMapping[key] = operatorsRegex.test(value) ? `(${value})` : value;
+        }
       }
 
-      return {
+      const parsedMapping: ParsedMapping = {
         ...m,
         requestMapping,
         requestMappingInputKeys,
         responseMapping,
         responseMappingInputKeys
+      };
+
+      return {
+        ...obj,
+        [parsedMapping.sourceId]: [...(obj[parsedMapping.sourceId] || []), parsedMapping]
       }
-    });
+    }, {});
     //For each of the target APIs, create trees that start at the source API and end at the specific target API.
     //Finally, flat-map all those trees into one array
-    const mappingTrees = targetIds.map(id => this.treeSearch(sourceId, id, mappings)).reduce((flat, trees) => [...flat, ...trees], []);
+    let mappingTrees = [];
+    for (let i = 0; i < targetIds.length; i++) {
+      const result = this.treeSearch(sourceId, targetIds[i], mappings);
+      mappingTrees = [...mappingTrees, ...result];
+    }
 
     let responseMapping = {};
     let requestMapping = {};
 
-    const sourceResponseBody = await this.validationService.getSourceResponseBody(source);
-    const targetRequestBodies = await this.validationService.getTargetRequestBodies(targets);
+    const [requiredSourceKeys, requiredTargetKeys] = await Promise.all([
+      this.validationService.getSourceResponseBody(source).then(b => flatten(b)).then(f => Object.keys(f)),
+      this.validationService.getTargetRequestBodies(targets).then(b => flatten(b)).then(f => Object.keys(f))
+    ]);
+
     //Now we build the final mappings by executing each identified mapping tree. The results get merged together into one request and response mapping.
-    for (const mappingTree of mappingTrees) {
-      const { requestMapping: reqMap, responseMapping: resMap, break: breakLoop } = this.executeMappingTree(mappingTree, sourceResponseBody, targetRequestBodies);
+    for (let i = 0; i < mappingTrees.length; i++) {
+      const { requestMapping: reqMap, responseMapping: resMap, break: breakLoop } = this.executeMappingTree(mappingTrees[i], requiredSourceKeys, requiredTargetKeys);
       responseMapping = { ...responseMapping, ...resMap };
       requestMapping = { ...requestMapping, ...reqMap };
       if (breakLoop) break;
     }
 
     //Clean request mapping so that it does not contain any references to APIs other than the targets
-    Object.keys(requestMapping).forEach(k => {
-      if (!targetIds.some(tId => k.startsWith(tId))) {
-        delete requestMapping[k];
+    for (const key in requestMapping) {
+      if (!targetIds.some(tId => key.indexOf(tId) === 0)) {
+        delete requestMapping[key];
       }
-    })
+    }
+
     requestMapping = unflatten(requestMapping);
     responseMapping = unflatten(responseMapping);
 
@@ -301,18 +318,21 @@ export class MappingService {
    * @param mappings A list of all existing mappings
    * @param visitedApis A list of APIs (i.e. vertices) that were already visited
    */
-  private treeSearch(sourceId: string, finalTragetId: string, mappings: Array<ParsedMapping>, visitedApis: Array<string> = []): Tree[] {
+  private treeSearch(sourceId: string, finalTragetId: string, mappings: { [key: string]: ParsedMapping[] }, visitedApis: Array<string> = []): Tree[] {
     //From all mappings, get the ones that match the source ID and that have not yet been visited
-    const sources = mappings.filter(m => m.sourceId === sourceId && !visitedApis.includes(sourceId));
+    const sources = mappings[sourceId];
 
-    const result = new Array<Tree>();
+    const result: Tree[] = [];
     //This double loop makes it so that each 1:n mapping is treated somewhat like a 1:1 mapping
-    for (const source of sources) {
-      for (const targetId of source.targetIds) {
+    for (let i = 0; i < sources.length; i++) {
+      const source = sources[i];
+      for (let j = 0; j < source.targetIds.length; j++) {
+        const targetId = source.targetIds[j];
+
         if (targetId === finalTragetId) {
           //If one target ID matches our final target API, we add the mapping without any children to the tree
           result.push({ node: source });
-        } else {
+        } else if (!(visitedApis.includes(targetId) || sourceId === targetId)) {
           //If the target ID does not yet match the final target, we execute the recursion step, resulting in a DFS
           const children = this.treeSearch(targetId, finalTragetId, mappings, [...visitedApis, sourceId]);
           //We only add a node to the final tree, if we have found any children that lead to the target. If not, we ignore this branch.
@@ -373,13 +393,13 @@ export class MappingService {
     const result: { [key: string]: string } = {};
 
     //For each entry in the mapping, try to replace a key from the input with a value from the input
-    for (const [key, value] of Object.entries(mapping)) {
+    for (const key in mapping) {
       //If a mapping entry requires value from a source other the the current input source API, skip it
       if (!mappingInputKeys[key].every(k => inputKeys.includes(k))) {
         continue;
       }
 
-      result[key] = value.replace(regex, (match) => input[match]);
+      result[key] = mapping[key].replace(regex, (match) => input[match]);
     }
 
     return result;
@@ -392,8 +412,8 @@ export class MappingService {
     const result: { [key: string]: string } = {};
 
     //For each entry in the mapping, try to replace a key from the input with a value from the input
-    for (const [key, value] of Object.entries(mapping)) {
-      result[key] = value.replace(regex, (match) => input[match]);
+    for (const key in mapping) {
+      result[key] = mapping[key].replace(regex, (match) => input[match]);
     }
 
     return result;
@@ -407,7 +427,7 @@ export class MappingService {
    * @param targetIds The IDs of all target APIs, required for filtering
    * @param requestInput The processed request mapping so far (required, as it needs to be passed downards the tree)
    */
-  private executeMappingTree(mappingTree: Tree, sourceResponseBody: object, targetRequestBodies: object, requestInput?: { [key: string]: string }) {
+  private executeMappingTree(mappingTree: Tree, requiredSourceKeys: string[], requiredTargetKeys: string[], requestInput?: { [key: string]: string }) {
     const { node, children } = mappingTree;
 
     //The request mapping that is passed back from the leafs to the root
@@ -432,8 +452,8 @@ export class MappingService {
 
     let responseInput: { [key: string]: string } = {};
     //Current element is not a leaf, so we continue the recursion
-    for (const child of children) {
-      const result = this.executeMappingTree(child, sourceResponseBody, targetRequestBodies, newRequestInput);
+    for (let i = 0; i < children.length; i++) {
+      const result = this.executeMappingTree(children[i], requiredSourceKeys, requiredTargetKeys, newRequestInput);
       if (result.break) {
         return result;
       }
@@ -451,8 +471,11 @@ export class MappingService {
     //Finally, we apply the current response mapping the the response input (i.e. the merged inputs from all children)
     const responseMapping = this.performResponseMapping(responseInput, node.responseMapping, node.responseMappingInputKeys);
 
-    const requestMappingValid = this.validationService.findMissing(requestMapping, targetRequestBodies).length === 0;
-    const responseMappingValid = this.validationService.findMissing(responseMapping, sourceResponseBody).length === 0;
+    const providedSourceKeys = Object.keys(responseMapping);
+    const providedTargetKeys = Object.keys(requestMapping);
+
+    const requestMappingValid = requiredTargetKeys.every(reqKey => providedTargetKeys.includes(reqKey));
+    const responseMappingValid = requiredSourceKeys.every(reqKey => providedSourceKeys.includes(reqKey));
 
     return { responseMapping, requestMapping, break: requestMappingValid && responseMappingValid };
   }

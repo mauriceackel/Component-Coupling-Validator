@@ -19,8 +19,8 @@ export class ValidationService {
   }
 
   public async getTargetRequestBodies(targets: { [key: string]: IInterface }) {
-    const schemaPromises = Object.entries(targets || {}).map(async ([key, value]) => ({key, schema: await getRequestSchema(value.api, { operationId: value.operationId, responseId: value.responseId }, true)}));
-    return (await Promise.all(schemaPromises)).reduce((obj, {key, schema}) => ({...obj, [key]: schema}), {});
+    const schemaPromises = Object.entries(targets || {}).map(async ([key, value]) => ({ key, schema: await getRequestSchema(value.api, { operationId: value.operationId, responseId: value.responseId }, true) }));
+    return (await Promise.all(schemaPromises)).reduce((obj, { key, schema }) => ({ ...obj, [key]: schema }), {});
   }
 
   public async validateMappingComplete(source: IInterface, targets: { [key: string]: IInterface }, mapping: IMapping) {
@@ -58,8 +58,8 @@ export class ValidationService {
     const providedKeys = Object.keys(flatten(provided));
     const requiredKeys = Object.keys(flatten(required));
 
-    for(const requiredKey of requiredKeys) {
-      if(!providedKeys.includes(requiredKey)) {
+    for (const requiredKey of requiredKeys) {
+      if (!providedKeys.includes(requiredKey)) {
         result.push(requiredKey.split('.'));
       }
     }
