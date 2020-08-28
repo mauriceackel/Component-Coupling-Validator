@@ -5,29 +5,29 @@ import { MatExpansionPanel } from '@angular/material/expansion';
 import { Router } from '@angular/router';
 import { merge, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
-import { IApi } from '~/app/models/api.model';
-import { IInterface } from '~/app/models/interface.model';
+import { IOpenApi } from '~/app/models/openapi.model';
+import { IOpenApiInterface } from '~/app/models/openapi-interface.model';
 import { IMappingPair, MappingType } from '~/app/models/mapping.model';
 import { ApiService } from '~/app/services/api.service';
 import { MappingService } from '~/app/services/mapping.service';
 import { TaskService } from '~/app/services/task.service';
 import { ValidationService } from '~/app/services/validation.service';
-import { ValidationError } from '~/app/utils/errors/validation-error';
+import { OpenApiValidationError } from '~/app/utils/errors/validation-error';
 import { ButtonType, GenericDialog } from '~/app/utils/generic-dialog/generic-dialog.component';
-import { getOperationTemplates, getRequestSchema, getResponseSchema, IOperationTemplate } from '~/app/utils/swagger-parser';
+import { getOperationTemplates, getRequestSchema, getResponseSchema, IOpenApiOperationTemplate } from '~/app/utils/swagger-parser';
 import { AdapterService, AdapterType } from '~/app/services/adapter.service';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ProgressIndicatorComponent } from '~/app/components/progress-indicator/progress-indicator.component';
 
 @Component({
-  selector: 'app-transformation',
+  selector: 'app-openapi-transformation',
   templateUrl: './transformation.component.html',
   styleUrls: ['./transformation.component.scss']
 })
 export class TransformationComponent implements OnInit, OnDestroy {
 
-  public apis: Array<IApi>;
+  public apis: Array<IOpenApi>;
 
   public targets = new FormArray([]);
 
@@ -38,11 +38,11 @@ export class TransformationComponent implements OnInit, OnDestroy {
     'targets': this.targets,
   });
 
-  public mappingSource: IInterface;
-  public mappingTargets: { [key: string]: IInterface };
+  public mappingSource: IOpenApiInterface;
+  public mappingTargets: { [key: string]: IOpenApiInterface };
 
-  public sourceOperations: Array<IOperationTemplate>;
-  public targetOperations: Array<Array<IOperationTemplate>>;
+  public sourceOperations: Array<IOpenApiOperationTemplate>;
+  public targetOperations: Array<Array<IOpenApiOperationTemplate>>;
 
   public sourceRequestBody: any;
   public sourceResponseBody: any;
@@ -52,9 +52,9 @@ export class TransformationComponent implements OnInit, OnDestroy {
   public requestMappingPairs: Array<IMappingPair>;
   public responseMappingPairs: Array<IMappingPair>;
 
-  public mappingError: ValidationError;
+  public mappingError: OpenApiValidationError;
 
-  private subscriptions = new Array<Subscription>();
+  private subscriptions: Array<Subscription>;
 
   @ViewChild(MatExpansionPanel) testRequest: MatExpansionPanel;
   private spinnerRef: OverlayRef = this.cdkSpinnerCreate();
@@ -85,7 +85,10 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.targetRequestBodies = undefined;
     this.targetResponseBodies = undefined;
 
-    this.apis = await this.apiService.getApis();
+    this.mappingError = undefined;
+    this.subscriptions = new Array<Subscription>();
+
+    this.apis = await this.apiService.getOpenApis();
 
     this.subscriptions.push(this.inputForm.valueChanges.subscribe(() => this.initializeMapping()));
 
@@ -103,7 +106,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
         };
       }
     }));
-    this.subscriptions.push(this.inputForm.get('mS').valueChanges.subscribe(async (val: IApi) => this.sourceOperations = val && await getOperationTemplates(val)));
+    this.subscriptions.push(this.inputForm.get('mS').valueChanges.subscribe(async (val: IOpenApi) => this.sourceOperations = val && await getOperationTemplates(val)));
 
     this.subscriptions.push(this.targets.valueChanges.subscribe(async () => {
       const targets = this.parseTargets();
@@ -138,7 +141,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
       'operations': new FormControl([])
     })
     this.subscriptions.push(
-      group.get('mT').valueChanges.subscribe(async (val: IApi) => group.get('operations').setValue(val && await getOperationTemplates(val)))
+      group.get('mT').valueChanges.subscribe(async (val: IOpenApi) => group.get('operations').setValue(val && await getOperationTemplates(val)))
     )
     this.targets.push(group);
   }
@@ -147,7 +150,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.targets.removeAt(index);
   }
 
-  private parseSource(): IInterface {
+  private parseSource(): IOpenApiInterface {
     if (!(this.inputForm.get('mS').valid && this.inputForm.get('mSO').valid && this.inputForm.get('mSR').valid)) return undefined;
 
     const data = this.inputForm.value;
@@ -158,17 +161,17 @@ export class TransformationComponent implements OnInit, OnDestroy {
     }
   }
 
-  private parseTargets(): { [key: string]: IInterface } {
+  private parseTargets(): { [key: string]: IOpenApiInterface } {
     if (!(this.targets.valid)) return undefined;
 
-    const targets = this.targets.value as Array<{ mT: IApi, mTO: IOperationTemplate, mTR: string }>;
+    const targets = this.targets.value as Array<{ mT: IOpenApi, mTO: IOpenApiOperationTemplate, mTR: string }>;
     return targets.reduce((obj, target) => ({
       ...obj,
       [`${target.mT.id}_${target.mTO.operationId}_${target.mTR}`]: {
         api: target.mT,
         operationId: target.mTO.operationId,
         responseId: target.mTR
-      } as IInterface
+      } as IOpenApiInterface
     }), {})
   }
 
@@ -196,7 +199,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
     this.showSpinner();
 
-    const { request, response } = await this.mappingService.buildMappingPairs(this.parseSource(), this.parseTargets());
+    const { request, response } = await this.mappingService.buildOpenApiMappingPairs(this.parseSource(), this.parseTargets());
 
     this.requestMappingPairs.splice(0);
     this.requestMappingPairs.push(...request);
@@ -235,6 +238,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
     });
     this.taskService.abortTask();
     this.testRequest.close();
+    this.subscriptions.forEach(s => s.unsubscribe());
     this.inputForm.reset();
     this.ngOnInit();
   }
@@ -242,21 +246,21 @@ export class TransformationComponent implements OnInit, OnDestroy {
   public async buildAdapter() {
     try {
       if ([...this.requestMappingPairs, ...this.responseMappingPairs].some(mp => !mp.mappingCode)) {
-        throw new ValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")
+        throw new OpenApiValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")
       }
 
       const source = this.parseSource();
       const targets = this.parseTargets();
-      const mapping = this.mappingService.buildMapping(source, targets, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
+      const mapping = this.mappingService.buildOpenApiMapping(source, targets, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
 
-      await this.validationService.validateMappingComplete(source, targets, mapping);
+      await this.validationService.validateOpenApiMappingComplete(source, targets, mapping);
 
       this.mappingError = undefined;
-      const downloadLink = await this.adapterService.createAdapter(mapping, AdapterType.JAVASCRIPT);
+      const downloadLink = await this.adapterService.createOpenApiAdapter(mapping, AdapterType.JAVASCRIPT);
 
       window.open(downloadLink, "_blank");
     } catch (err) {
-      if (err instanceof ValidationError) {
+      if (err instanceof OpenApiValidationError) {
         this.mappingError = err;
         return;
       }
@@ -267,17 +271,17 @@ export class TransformationComponent implements OnInit, OnDestroy {
   public async finishMapping() {
     try {
       if ([...this.requestMappingPairs, ...this.responseMappingPairs].some(mp => !mp.mappingCode)) {
-        throw new ValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")
+        throw new OpenApiValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")
       }
 
       const source = this.parseSource();
       const targets = this.parseTargets();
-      const mapping = this.mappingService.buildMapping(source, targets, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
+      const mapping = this.mappingService.buildOpenApiMapping(source, targets, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
 
-      await this.validationService.validateMappingComplete(source, targets, mapping);
+      await this.validationService.validateOpenApiMappingComplete(source, targets, mapping);
 
       this.mappingError = undefined;
-      await this.mappingService.createMapping(mapping);
+      await this.mappingService.createOpenApiMapping(mapping);
 
       if (this.taskService.TaskRunning) {
         this.taskService.finishTask();
@@ -287,7 +291,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
       }
 
     } catch (err) {
-      if (err instanceof ValidationError) {
+      if (err instanceof OpenApiValidationError) {
         this.mappingError = err;
         return;
       }

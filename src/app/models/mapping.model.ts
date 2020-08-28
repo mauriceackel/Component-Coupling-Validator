@@ -6,8 +6,6 @@ export interface IMapping {
   type: MappingType;
   sourceId: string //Id of IInterface
   targetIds: string[]
-  requestMapping: string //JSONata mapping
-  responseMapping: string //JSONata mapping
 }
 
 export interface IMappingPair {
@@ -20,4 +18,8 @@ export enum MappingType {
   TRANSFORMATION,
   AUTO,
   REVERSE
+}
+
+export enum MappingDirection {
+  INPUT, OUTPUT
 }

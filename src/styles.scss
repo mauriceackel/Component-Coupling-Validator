@@ -17,6 +17,12 @@ body {
   cursor: pointer;
 }
 
+.link-active {
+  background-color: mat-color($app-primary, 50);
+  color: mat-contrast($app-primary, 50);
+}
+
+
 .color-primary {
   background-color: mat-color($app-primary, 500) !important;
   color: mat-contrast($app-primary, 700) !important;

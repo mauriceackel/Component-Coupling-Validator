@@ -2181,7 +2181,7 @@ var jsonata = (function () {
           var thenHandler = function (response) {
             result = it.next(response);
             if (result.done) {
-              callback(null, inputs);
+              callback(null, inputs.map(i => i.startsWith('.') ? i.slice(1) : i));
             } else {
               result.value.then(thenHandler).catch(catchHandler);
             }
@@ -2197,7 +2197,7 @@ var jsonata = (function () {
             while (!result.done) {
               result = it.next(result.value);
             }
-            return inputs;
+            return inputs.map(i => i.startsWith('.') ? i.slice(1) : i);
           } catch (err) {
             // insert error message into structure
             populateMessage(err); // possible side-effects on `err`

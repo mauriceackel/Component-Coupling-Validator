@@ -1,6 +1,6 @@
 import { KeyChain } from '../../services/jsontree.service';
 
-export class ValidationError extends Error {
+export class OpenApiValidationError extends Error {
 
   public missingRequestProperties: Array<KeyChain>;
   public missingResponseProperties: Array<KeyChain>;
@@ -10,6 +10,18 @@ export class ValidationError extends Error {
       this.missingRequestProperties = missingRequestProperties;
       this.missingResponseProperties = missingResponseProperties;
       // Set the prototype explicitly.
-      Object.setPrototypeOf(this, ValidationError.prototype);
+      Object.setPrototypeOf(this, OpenApiValidationError.prototype);
+  }
+}
+
+export class AsyncApiValidationError extends Error {
+
+  public missingMessageProperties: Array<KeyChain>;
+
+  constructor(message?: string, missingMessageProperties: Array<KeyChain> = []) {
+      super(message);
+      this.missingMessageProperties = missingMessageProperties;
+      // Set the prototype explicitly.
+      Object.setPrototypeOf(this, AsyncApiValidationError.prototype);
   }
 }

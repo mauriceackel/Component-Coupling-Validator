@@ -6,5 +6,4 @@ export interface IApi {
     company?: string
     keywords?: string
   }
-  openApiSpec: any
 }

@@ -7,6 +7,9 @@ import { HomeComponent } from './home.component';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
+import { RouterModule } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { MatToolbarModule } from '@angular/material/toolbar';
 
 @NgModule({
   declarations: [
@@ -19,7 +22,10 @@ import { MatListModule } from '@angular/material/list';
     MatCardModule,
     MatSelectModule,
     MatButtonModule,
-    MatListModule
+    MatListModule,
+    RouterModule,
+    MatIconModule,
+    MatToolbarModule
   ],
   exports: [
     HomeComponent

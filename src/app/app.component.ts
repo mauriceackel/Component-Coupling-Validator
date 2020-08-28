@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
 import { AuthenticationService } from './services/authentication.service';
 import { TaskService } from './services/task.service';
+import { ApiService } from './services/api.service';
+import { getMessageSchema } from './utils/asyncapi-parser';
 
 @Component({
   selector: 'app-root',
@@ -9,6 +11,6 @@ import { TaskService } from './services/task.service';
 })
 export class AppComponent {
 
-  constructor(public identificationService: AuthenticationService, public taskService: TaskService) { }
+  constructor() { }
 
 }

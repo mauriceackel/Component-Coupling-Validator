@@ -12,12 +12,10 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { AuthenticationService, AuthGuard } from './services/authentication.service';
 import { DisableChildrenModule } from './utils/directives/disable-children.directive';
-import { DescribeModule } from './views/describe/describe.module';
+import { BaseModule as OpenApiBaseModule } from './views/open-api/base.module';
+import { BaseModule as AsyncApiBaseModule } from './views/async-api/base.module';
 import { HomeModule } from './views/home/home.module';
 import { LoginModule } from './views/login/login.module';
-import { TransformationModule } from './views/transformation/transformation.module';
-
-
 
 @NgModule({
   declarations: [
@@ -30,12 +28,10 @@ import { TransformationModule } from './views/transformation/transformation.modu
     BrowserModule,
     AppRoutingModule,
     BrowserAnimationsModule,
-    MatToolbarModule,
-    MatButtonModule,
     MatIconModule,
     HomeModule,
-    DescribeModule,
-    TransformationModule,
+    OpenApiBaseModule,
+    AsyncApiBaseModule,
     LoginModule,
     DisableChildrenModule,
   ],

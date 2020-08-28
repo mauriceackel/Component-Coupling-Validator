@@ -6,7 +6,7 @@ import { IMappingPair } from '~/app/models/mapping.model';
 import { arrayEquals } from '~/app/utils/array-utils';
 import { JsonTreeNode, JsonTreeService } from '../../services/jsontree.service';
 import { TransformationDialog } from '../transformation-dialog/transformation-dialog.component';
-import { MappingService } from '~/app/services/mapping.service';
+import { MappingService, buildJSONataKey } from '~/app/services/mapping.service';
 
 @Component({
   selector: 'app-mapping-zone',
@@ -66,13 +66,13 @@ export class MappingZoneComponent implements OnInit, OnChanges {
       this.mappingPairs.push({
         provided: this.selectedLeft.map(n => n.keyChain),
         required: this.selectedRight[0].keyChain,
-        mappingCode: this.selectedLeft.length === 1 ? this.selectedLeft[0].keyChain.join('.') : "",
+        mappingCode: this.selectedLeft.length === 1 ? buildJSONataKey(this.selectedLeft[0].keyChain) : "",
       });
     } else {
       this.mappingPairs.push({
         provided: this.selectedRight.map(n => n.keyChain),
         required: this.selectedLeft[0].keyChain,
-        mappingCode: this.selectedRight.length === 1 ? this.selectedRight[0].keyChain.join('.') : "",
+        mappingCode: this.selectedRight.length === 1 ? buildJSONataKey(this.selectedRight[0].keyChain) : "",
       });
     }
     this.selectedLeft = new Array<JsonTreeNode>();

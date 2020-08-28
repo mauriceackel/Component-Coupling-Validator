@@ -44,7 +44,7 @@ export class AuthenticationService {
 
   public async logout() {
     await this.firebaseAuth.signOut();
-    this.router.navigate(["/login"]);
+    this.router.navigate(["/home/login"]);
   }
 
 }
@@ -61,7 +61,7 @@ export class AuthGuard implements CanActivate {
         if (user) {
           return true;
         }
-        this.router.navigate(['/login'], { queryParams: { returnUrl: state.url }});
+        this.router.navigate(['/home/login'], { queryParams: { returnUrl: state.url }});
         return false;
       })
     )

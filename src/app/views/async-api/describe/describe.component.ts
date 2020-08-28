@@ -5,20 +5,20 @@ import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { IApi } from '~/app/models/api.model';
+import { IAsyncApi } from '~/app/models/asyncapi.model';
 import { ApiService } from '~/app/services/api.service';
 import { AuthenticationService } from '~/app/services/authentication.service';
 import { JsonTreeNode } from '~/app/services/jsontree.service';
 import { ButtonType, GenericDialog } from '~/app/utils/generic-dialog/generic-dialog.component';
 
 @Component({
-  selector: 'app-describe',
+  selector: 'app-asyncapi-describe',
   templateUrl: './describe.component.html',
   styleUrls: ['./describe.component.scss']
 })
 export class DescribeComponent implements OnInit, OnDestroy {
 
-  public apis: Array<IApi>;
+  public apis: Array<IAsyncApi>;
 
   public selectedApi: FormControl;
   public selectionSubscription: Subscription;
@@ -39,17 +39,17 @@ export class DescribeComponent implements OnInit, OnDestroy {
 
   public async ngOnInit() {
     this.selectedApi = new FormControl(undefined, Validators.required);
-    this.selectionSubscription = this.selectedApi.valueChanges.subscribe((newVal: IApi) => {
+    this.selectionSubscription = this.selectedApi.valueChanges.subscribe((newVal: IAsyncApi) => {
       if (newVal === undefined) return;
 
       if (newVal === null) {
         //TODO: Make better
-        const newApi: IApi = {
+        const newApi: IAsyncApi = {
           name: "",
           metadata: {},
           id: undefined,
           createdBy: this.identificationService.User.uid,
-          openApiSpec: ""
+          asyncApiSpec: "",
         };
 
         this.apis.push(newApi);
@@ -57,7 +57,7 @@ export class DescribeComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.apis = await this.apiService.getApis();
+    this.apis = await this.apiService.getAsyncApis();
 
     this.activatedRoute.queryParams.subscribe(params => {
       this.selectedApi.setValue(this.apis.find(i => i.id === params["selectedId"]));
@@ -74,7 +74,7 @@ export class DescribeComponent implements OnInit, OnDestroy {
     if (files[0]) {
       const fileReader = new FileReader();
       fileReader.onload = (e) => {
-        this.selectedApi.value.openApiSpec = JSON.parse(fileReader.result as string)
+        this.selectedApi.value.asyncApiSpec = JSON.parse(fileReader.result as string)
       }
       fileReader.readAsText(files[0]);
     }
@@ -91,9 +91,9 @@ export class DescribeComponent implements OnInit, OnDestroy {
   }
 
   public async finish() {
-    const data: IApi = this.selectedApi.value;
-    if (data.name && data.openApiSpec) {
-      await this.apiService.updateApi(this.selectedApi.value);
+    const data: IAsyncApi = this.selectedApi.value;
+    if (data.name && data.asyncApiSpec) {
+      await this.apiService.updateAsyncApi(this.selectedApi.value);
       this.showSuccessDialog();
     } else {
       this.showErrorDialog();

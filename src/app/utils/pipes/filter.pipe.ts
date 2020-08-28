@@ -1,4 +1,5 @@
 import { NgModule, Pipe, PipeTransform } from "@angular/core";
+import { IOpenApi } from '~/app/models/openapi.model';
 import { IApi } from '~/app/models/api.model';
 
 @Pipe({

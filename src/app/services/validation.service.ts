@@ -1,38 +1,54 @@
 import { Injectable } from "@angular/core";
-import { IInterface } from '../models/interface.model';
-import { IMapping } from '../models/mapping.model';
-import { ValidationError } from '../utils/errors/validation-error';
+import { IOpenApiInterface } from '../models/openapi-interface.model';
+import { IOpenApiMapping } from '../models/openapi-mapping.model';
+import { OpenApiValidationError } from '../utils/errors/validation-error';
 import { getRequestSchema, getResponseSchema } from '../utils/swagger-parser';
 import { flatten, unflatten } from 'flat';
 import { KeyChain } from './jsontree.service';
+import { IAsyncApiInterface } from '../models/asyncapi-interface.model';
+import { getMessageSchema } from '../utils/asyncapi-parser';
+import { IAsyncApiMapping } from '../models/asyncapi-mapping.model';
+import { MappingDirection } from '../models/mapping.model';
 
 @Injectable({
   providedIn: "root"
 })
 export class ValidationService {
 
-  public async getSourceResponseBody(source: IInterface) {
+  public async getSourceResponseBody(source: IOpenApiInterface) {
     const { api: srcApi, ...srcOperation } = source;
     return {
       [`${srcApi.id}_${srcOperation.operationId}_${srcOperation.responseId}`]: await getResponseSchema(srcApi, srcOperation)
     }
   }
 
-  public async getTargetRequestBodies(targets: { [key: string]: IInterface }) {
+  public async getTargetRequestBodies(targets: { [key: string]: IOpenApiInterface }) {
     const schemaPromises = Object.entries(targets || {}).map(async ([key, value]) => ({ key, schema: await getRequestSchema(value.api, { operationId: value.operationId, responseId: value.responseId }, true) }));
     return (await Promise.all(schemaPromises)).reduce((obj, { key, schema }) => ({ ...obj, [key]: schema }), {});
   }
 
-  public async validateMappingComplete(source: IInterface, targets: { [key: string]: IInterface }, mapping: IMapping) {
+  public async getSourceMessageBody(source: IAsyncApiInterface) {
+    const { api: srcApi, ...srcOperation } = source;
+    return {
+      [`${srcApi.id}_${srcOperation.operationId}`]: await getMessageSchema(srcApi, srcOperation)
+    }
+  }
+
+  public async getTargetMessageBodies(targets: { [key: string]: IAsyncApiInterface }) {
+    const schemaPromises = Object.entries(targets || {}).map(async ([key, value]) => ({ key, schema: await getMessageSchema(value.api, { operationId: value.operationId, url: value.url }, true) }));
+    return (await Promise.all(schemaPromises)).reduce((obj, { key, schema }) => ({ ...obj, [key]: schema }), {});
+  }
+
+  public async validateOpenApiMappingComplete(source: IOpenApiInterface, targets: { [key: string]: IOpenApiInterface }, mapping: IOpenApiMapping) {
     const [sourceResponseBody, targetRequestBodies] = await Promise.all([
       this.getSourceResponseBody(source),
       this.getTargetRequestBodies(targets)
     ])
 
-    return this.validateMapping(mapping, sourceResponseBody, targetRequestBodies);
+    return this.validateOpenApiMapping(mapping, sourceResponseBody, targetRequestBodies);
   }
 
-  public validateMapping(mapping: IMapping, sourceResponseBody: any, targetRequestBodies: any) {
+  public validateOpenApiMapping(mapping: IOpenApiMapping, sourceResponseBody: any, targetRequestBodies: any) {
     const missingRequest = this.findMissing(JSON.parse(mapping.requestMapping), targetRequestBodies);
     const missingResponse = this.findMissing(JSON.parse(mapping.responseMapping), sourceResponseBody);
 
@@ -47,7 +63,32 @@ export class ValidationService {
       if (missingRequest.length > 0 && missingResponse.length > 0) {
         errorMessage = "Missing request mappings\n" + missingRequest.map(m => m.join('.')).join(', ') + "\n\nMissing response mappings\n" + missingResponse.map(m => m.join('.')).join(', ')
       }
-      throw new ValidationError(errorMessage, missingRequest, missingResponse);
+      throw new OpenApiValidationError(errorMessage, missingRequest, missingResponse);
+    }
+  }
+
+  public async validateAsyncApiMappingComplete(source: IAsyncApiInterface, targets: { [key: string]: IAsyncApiInterface }, mapping: IAsyncApiMapping, direction: MappingDirection) {
+    const missing: KeyChain[] = [];
+
+    if (direction === MappingDirection.INPUT) {
+      // source = consumer & targets = consumer
+      // All source-props need to be mapped for every target's props
+      const sourceBody = await this.getSourceMessageBody(source);
+      for(const targetId of Object.keys(targets)) {
+        missing.push(...this.findMissing(JSON.parse(mapping.messageMappings[targetId] || "{}"), sourceBody));
+      }
+    } else if (direction === MappingDirection.OUTPUT) {
+      // source = producer & targets = producer
+      // Each target-prop needs to be mapped
+      const targetBodies = await this.getTargetMessageBodies(targets);
+      for(const targetId of Object.keys(targets)) {
+        missing.push(...this.findMissing(JSON.parse(mapping.messageMappings[targetId] || "{}"), targetBodies[targetId]));
+      }
+    }
+
+    if (missing.length > 0) {
+      const errorMessage = "Missing message mappings\n" + missing.map(m => m.join('.')).join(', ');
+      throw new OpenApiValidationError(errorMessage, missing);
     }
   }
 

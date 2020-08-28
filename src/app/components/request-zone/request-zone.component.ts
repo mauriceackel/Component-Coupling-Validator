@@ -1,11 +1,11 @@
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import * as jsonata from 'jsonata';
-import { IInterface } from '~/app/models/interface.model';
+import { IOpenApiInterface } from '~/app/models/openapi-interface.model';
 import { IMappingPair, MappingType } from '~/app/models/mapping.model';
 import { MappingService, stringifyedToJsonata } from '~/app/services/mapping.service';
 import { RequestService } from '~/app/services/request.service';
 import { ValidationService } from '~/app/services/validation.service';
-import { ValidationError } from '~/app/utils/errors/validation-error';
+import { OpenApiValidationError } from '~/app/utils/errors/validation-error';
 import { getRequestUrls } from '~/app/utils/swagger-parser';
 
 @Component({
@@ -23,13 +23,13 @@ export class RequestZoneComponent implements OnInit, OnChanges {
 
   public endpoints: Array<{url: string, method: string}> = [];
 
-  @Input("mappingSource") public mappingSource: IInterface;
-  @Input("mappingTargets") public mappingTargets: { [key: string]: IInterface };
+  @Input("mappingSource") public mappingSource: IOpenApiInterface;
+  @Input("mappingTargets") public mappingTargets: { [key: string]: IOpenApiInterface };
 
   @Input("requestMappingPairs") public requestMappingPairs: Array<IMappingPair>;
   @Input("responseMappingPairs") public responseMappingPairs: Array<IMappingPair>;
 
-  public mappingError: ValidationError;
+  public mappingError: OpenApiValidationError;
 
   constructor(
     private requestService: RequestService,
@@ -54,9 +54,9 @@ export class RequestZoneComponent implements OnInit, OnChanges {
   }
 
   public async testRequest() {
-    const mapping = this.mappingService.buildMapping(this.mappingSource, this.mappingTargets, this.requestMappingPairs, this.responseMappingPairs, MappingType.AUTO);
+    const mapping = this.mappingService.buildOpenApiMapping(this.mappingSource, this.mappingTargets, this.requestMappingPairs, this.responseMappingPairs, MappingType.AUTO);
     try {
-      await this.validationService.validateMappingComplete(this.mappingSource, this.mappingTargets, mapping);
+      await this.validationService.validateOpenApiMappingComplete(this.mappingSource, this.mappingTargets, mapping);
       this.mappingError = undefined;
 
       const targetInputData = jsonata(stringifyedToJsonata(mapping.requestMapping)).evaluate(this.currentInputData);
@@ -64,7 +64,7 @@ export class RequestZoneComponent implements OnInit, OnChanges {
 
       this.outputData = await this.requestService.sendRequest(this.currentInputData, mapping, this.mappingTargets);
     } catch (err) {
-      if (err instanceof ValidationError) {
+      if (err instanceof OpenApiValidationError) {
         this.outputData = {};
         this.mappingError = err;
         return;

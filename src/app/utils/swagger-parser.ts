@@ -1,11 +1,11 @@
 import * as deepcopy from 'deepcopy';
 import { OpenAPIV2, OpenAPIV3 } from 'openapi-types';
 import * as SwaggerParser from 'swagger-parser';
-import { IApi } from '../models/api.model';
-import { IInterface } from '../models/interface.model';
+import { IOpenApi } from '../models/openapi.model';
+import { IOpenApiInterface } from '../models/openapi-interface.model';
 
-export async function getServer(api: IApi) {
-  let apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } });
+export async function getServer(api: IOpenApi) {
+  const apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } });
 
   switch (true) {
     case !!api.openApiSpec.swagger && api.openApiSpec.swagger.startsWith('2'): {
@@ -21,11 +21,11 @@ export async function getServer(api: IApi) {
   }
 }
 
-export async function getRequestUrls(ifaces: { [key: string]: IInterface }, paramValues: { [key: string]: { parameters: { [key: string]: string } } } = {}) {
+export async function getRequestUrls(ifaces: { [key: string]: IOpenApiInterface }, paramValues: { [key: string]: { parameters: { [key: string]: string } } } = {}) {
   return Promise.all(Object.entries(ifaces).map(([key, value]) => getRequestUrl(value, paramValues[key]?.parameters)));
 }
 
-export async function getRequestUrl(iface: IInterface, paramValues: { [key: string]: string } = {}) {
+export async function getRequestUrl(iface: IOpenApiInterface, paramValues: { [key: string]: string } = {}) {
   const server = await getServer(iface.api);
   const { url, method, path, operation } = await getOperation(iface.api, iface.operationId);
 
@@ -38,10 +38,10 @@ export async function getRequestUrl(iface: IInterface, paramValues: { [key: stri
   return { method, url: `${server}${urlWithParams}${query ? '?' + query : ''}` }
 }
 
-export async function getOperationTemplates(api: IApi) {
-  let operationTemplates: IOperationTemplate[] = [];
+export async function getOperationTemplates(api: IOpenApi) {
+  let operationTemplates: IOpenApiOperationTemplate[] = [];
 
-  let apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document;
+  const apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document;
 
   for (const url in apiObject.paths) {
     let path = apiObject.paths[url];
@@ -63,12 +63,12 @@ export async function getOperationTemplates(api: IApi) {
   return operationTemplates;
 }
 
-export function getResponses(operationTemplates: IOperationTemplate[], operationId: string | undefined) {
+function getResponses(operationTemplates: IOpenApiOperationTemplate[], operationId: string | undefined) {
   return operationTemplates?.find(t => t.operationId == operationId)?.responseIds;
 }
 
-export async function getOperation(api: IApi, operationId: string) {
-  let apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document;
+export async function getOperation(api: IOpenApi, operationId: string) {
+  const apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document;
 
   //Iterate all pathes
   for (const url in apiObject.paths) {
@@ -91,8 +91,8 @@ export async function getOperation(api: IApi, operationId: string) {
   return undefined;
 }
 
-export async function getResponseSchema(api: IApi, searchOperation: IOperation) {
-  let apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document | OpenAPIV2.Document;
+export async function getResponseSchema(api: IOpenApi, searchOperation: IOpenApiOperation) {
+  const apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document | OpenAPIV2.Document;
 
   //Iterate all pathes
   for (const url in apiObject.paths) {
@@ -129,8 +129,8 @@ export async function getResponseSchema(api: IApi, searchOperation: IOperation) 
   return undefined;
 }
 
-export async function getRequestSchema(api: IApi, searchOperation: IOperation, ignoreOptional: boolean = false) {
-  let apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document | OpenAPIV2.Document;
+export async function getRequestSchema(api: IOpenApi, searchOperation: IOpenApiOperation, ignoreOptional: boolean = false) {
+  const apiObject = await SwaggerParser.validate(deepcopy(api.openApiSpec), { validate: { spec: false } }) as OpenAPIV3.Document | OpenAPIV2.Document;
 
   const result = {} as any;
 
@@ -218,12 +218,12 @@ function flattenSchema(schema: any) {
   }
 }
 
-export interface IOperationTemplate {
+export interface IOpenApiOperationTemplate {
   operationId: string,
   responseIds: Array<string>
 }
 
-export interface IOperation {
+export interface IOpenApiOperation {
   operationId: string,
   responseId: string | undefined
 }

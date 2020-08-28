@@ -2,40 +2,54 @@ import { Injectable } from "@angular/core";
 import { AngularFirestore } from '@angular/fire/firestore';
 import { AngularFirestoreCollection } from '@angular/fire/firestore/public_api';
 import { flatten, unflatten } from 'flat';
-import { IInterface } from '../models/interface.model';
-import { IMapping, IMappingPair, MappingType } from '../models/mapping.model';
+import { IOpenApiInterface } from '../models/openapi-interface.model';
+import { IOpenApiMapping } from '../models/openapi-mapping.model';
 import * as getinputs from '../utils/get-inputs/get-inputs';
 import { removeUndefined } from '../utils/remove-undefined';
 import { AuthenticationService } from './authentication.service';
 import createSha1Hash from '../utils/buildHash';
 import { ValidationService } from './validation.service';
+import { IAsyncApiMapping } from '../models/asyncapi-mapping.model';
+import { IAsyncApiInterface } from '../models/asyncapi-interface.model';
+import { IMappingPair, MappingType, MappingDirection, IMapping } from '../models/mapping.model';
+import { KeyChain } from './jsontree.service';
 
-type Tree = { node: ParsedMapping, children?: Tree[] };
-type ParsedMapping = Omit<IMapping, "requestMapping" | "responseMapping"> & { requestMapping: { [key: string]: string }, requestMappingInputKeys: { [key: string]: string[] }, responseMapping: { [key: string]: string }, responseMappingInputKeys: { [key: string]: string[] } }
-const operatorsRegex = /=|!|\+|-|\*|\/|>|<|\sand\s|\sor\s|\sin\s|&|%/g;
+type Tree = { node: ParsedOpenApiMapping | ParsedAsyncApiMapping, children?: Tree[] }
+type OpenApiTree = { node: ParsedOpenApiMapping, children?: OpenApiTree[] };
+type ParsedOpenApiMapping = Omit<IOpenApiMapping, "requestMapping" | "responseMapping"> & { requestMapping: { [key: string]: string }, requestMappingInputKeys: { [key: string]: string[] }, responseMapping: { [key: string]: string }, responseMappingInputKeys: { [key: string]: string[] } }
+type AsyncApiTree = { node: ParsedAsyncApiMapping, children?: AsyncApiTree[] };
+type ParsedAsyncApiMapping = Omit<IAsyncApiMapping, "messageMappings"> & { messageMappings: { [targetId: string]: { [key: string]: string } }, messageMappingsInputKeys: { [targetId: string]: { [key: string]: string[] } } }
+const operatorsRegex = /(=|!|\+|-|\*|\/|>|<|\sand\s|\sor\s|\sin\s|&|%)(?!((\w|-)*?"$)|((\w|-)*?"\."))/g;
 
 @Injectable({
   providedIn: 'root'
 })
 export class MappingService {
 
-  private mappingColl: AngularFirestoreCollection<IMapping>;
+  private readonly openApiMappingColl = this.firestore.collection<IOpenApiMapping>('openApiMappings');
+  private readonly asyncApiMappingColl = this.firestore.collection<IAsyncApiMapping>('asyncApiMappings');
 
   constructor(
     private identificationService: AuthenticationService,
     private firestore: AngularFirestore,
     private validationService: ValidationService
-  ) {
-    this.mappingColl = this.firestore.collection('mappings');
-  }
+  ) { }
 
   /**
    * Get all mappings from the database
    * @param conditions A set of conditions that are applied when getting the results
    */
-  public async getMappings(conditions: { [key: string]: any } = {}): Promise<Array<IMapping>> {
-    const mappings = (await this.mappingColl.get().toPromise()).docs.map(doc => this.parseMapping(doc.id, doc.data()));
-    const filteredMappings = mappings.filter(mapping => Object.entries(conditions).every(e => mapping[e[0]] === e[1]));
+  public async getOpenApiMappings(conditions: { [key: string]: any } = {}): Promise<Array<IOpenApiMapping>> {
+    return this.getMappings(this.openApiMappingColl, conditions);
+  }
+
+  public async getAsyncApiMappings(conditions: { [key: string]: any } = {}): Promise<Array<IAsyncApiMapping>> {
+    return this.getMappings(this.asyncApiMappingColl, conditions);
+  }
+
+  private async getMappings<T = IOpenApiMapping | IAsyncApiMapping>(collection: AngularFirestoreCollection, conditions: { [key: string]: any } = {}): Promise<Array<T>> {
+    const mappings = (await collection.get().toPromise()).docs.map(doc => this.parseMapping<T>(doc.id, doc.data()));
+    const filteredMappings = mappings.filter(mapping => Object.entries(conditions).every(([key, value]) => mapping[key] === value));
 
     return filteredMappings;
   }
@@ -44,40 +58,69 @@ export class MappingService {
    * Get a single mapping by id
    * @param id The id of the mapping that schould be retrieved
    */
-  public async getMapping(id: string): Promise<IMapping> {
-    const doc = await this.mappingColl.doc<IMapping>(id).get().toPromise();
-    return this.parseMapping(doc.id, doc.data());
+  public async getOpenApiMapping(id: string): Promise<IOpenApiMapping> {
+    return this.getMapping(this.openApiMappingColl, id);
+  }
+
+  public async getAsyncApiMapping(id: string): Promise<IAsyncApiMapping> {
+    return this.getMapping(this.asyncApiMappingColl, id);
+  }
+
+  private async getMapping<T>(collection: AngularFirestoreCollection, id: string): Promise<T> {
+    const doc = await collection.doc<T>(id).get().toPromise();
+    return this.parseMapping<T>(doc.id, doc.data());
   }
 
   /**
    * Store a mapping in the database
    * @param mapping
    */
-  public async createMapping(mapping: IMapping) {
-    const reverseMappings = this.buildReverseMappings(mapping);
+  public async createOpenApiMapping(mapping: IOpenApiMapping) {
+    const reverseMappings = this.buildOpenApiReverseMappings(mapping);
 
-    return Promise.all([mapping, ...reverseMappings].map(async (m) => {
-      const id = await createSha1Hash(m.requestMapping + m.responseMapping);
-      return this.mappingColl.doc(id).set(this.serializeMapping(m));
-    }));
+    //Only primary mapping mandatory to be written. We ignore if reverse mappings create errors
+    return Promise.all([
+      this.openApiMappingColl.doc(await createSha1Hash(mapping.requestMapping + mapping.responseMapping)).set(this.serializeMapping(mapping)),
+      ...reverseMappings.map(async (m) => {
+        const id = await createSha1Hash(m.requestMapping + m.responseMapping);
+        return this.openApiMappingColl.doc(id).set(this.serializeMapping(m)).finally();
+      })
+    ]);
+  }
+
+  public async createAsyncApiMapping(mapping: IAsyncApiMapping) {
+    const reverseMappings = this.buildAsyncApiReverseMappings(mapping);
+
+    //Only primary mapping mandatory to be written. We ignore if reverse mappings create errors
+    return Promise.all([
+      this.asyncApiMappingColl.doc(await createSha1Hash(Object.values(mapping.messageMappings).join(''))).set(this.serializeMapping(mapping)),
+      ...reverseMappings.map(async (m) => {
+        const id = await createSha1Hash(Object.values(m.messageMappings).join(''));
+        return this.asyncApiMappingColl.doc(id).set(this.serializeMapping(m)).finally();
+      })
+    ]);
   }
 
   /**
    * Updates a mapping in the database
    * @param mapping
    */
-  public async updateMapping(mapping: IMapping) {
-    return this.mappingColl.doc(mapping.id).update(this.serializeMapping(mapping));
+  public async updateOpenApiMapping(mapping: IOpenApiMapping) {
+    return this.openApiMappingColl.doc(mapping.id).update(this.serializeMapping(mapping));
   }
 
-  private parseMapping(id: string, mapping: any): IMapping {
+  public async updateAsyncApiMapping(mapping: IAsyncApiMapping) {
+    return this.asyncApiMappingColl.doc(mapping.id).update(this.serializeMapping(mapping));
+  }
+
+  private parseMapping<T = IOpenApiMapping | IAsyncApiMapping>(id: string, mapping: any): T {
     return {
       ...mapping,
       id
     }
   }
 
-  private serializeMapping(mapping: IMapping) {
+  private serializeMapping(mapping: IOpenApiMapping | IAsyncApiMapping) {
     let result = {
       ...mapping,
       id: undefined
@@ -94,9 +137,9 @@ export class MappingService {
    * @param responseMappingPairs The mapping pairs of the response (target->source)
    * @param type The type of this mapping
    */
-  public buildMapping(source: IInterface, targets: { [key: string]: IInterface }, requestMappingPairs: Array<IMappingPair>, responseMappingPairs: Array<IMappingPair>, type: MappingType): IMapping {
-    const requestTransformation = this.mappingPairsToTrans(requestMappingPairs, MappingDirection.INPUT);
-    const responseTransformation = this.mappingPairsToTrans(responseMappingPairs, MappingDirection.OUTPUT);
+  public buildOpenApiMapping(source: IOpenApiInterface, targets: { [key: string]: IOpenApiInterface }, requestMappingPairs: Array<IMappingPair>, responseMappingPairs: Array<IMappingPair>, type: MappingType): IOpenApiMapping {
+    const requestTransformation = this.mappingPairsToTrans(requestMappingPairs);
+    const responseTransformation = this.mappingPairsToTrans(responseMappingPairs);
 
     return {
       id: undefined,
@@ -109,12 +152,51 @@ export class MappingService {
     }
   }
 
+  public buildAsyncApiMapping(source: IAsyncApiInterface, targets: { [key: string]: IAsyncApiInterface }, messageMappingPairs: Array<IMappingPair>, direction: MappingDirection, type: MappingType): IAsyncApiMapping {
+    const clusteredMappingPairs: { [key: string]: Array<IMappingPair> } = {};
+
+    if (direction === MappingDirection.INPUT) {
+      //target = provided
+      for (const mappingPair of messageMappingPairs) {
+        clusteredMappingPairs[mappingPair.provided[0][0]] = [...(clusteredMappingPairs[mappingPair.provided[0][0]] || []), mappingPair]
+      }
+    } else if (direction === MappingDirection.OUTPUT) {
+      //target = required
+      for (const mappingPair of messageMappingPairs) {
+        clusteredMappingPairs[mappingPair.required[0]] = [...(clusteredMappingPairs[mappingPair.required[0]] || []), mappingPair]
+      }
+    }
+
+    const messageMappings = Object.keys(targets).reduce((result, targetId) => {
+      return {
+        ...result,
+        [targetId]: JSON.stringify(this.mappingPairsToTrans(clusteredMappingPairs[targetId] || []))
+      }
+    }, {})
+
+    console.log(targets);
+    console.log(Object.entries(targets).reduce((obj, [targetId, value]) => ({...obj, [targetId]: value.url}), {}));
+    return {
+      id: undefined,
+      createdBy: this.identificationService.User.uid,
+      type: type,
+      sourceId: `${source.api.id}_${source.operationId}`,
+      targetIds: Object.keys(targets),
+      topics: {
+        source: source.url,
+        targets: Object.entries(targets).reduce((obj, [targetId, value]) => ({...obj, [targetId]: value.url}), {})
+      },
+      messageMappings,
+      direction
+    }
+  }
+
   /**
    * Creates a symmetrical, "reverted" mapping for a mapping that is about to be stored in the database.
    *
    * @param mapping The mapping that should be reverted
    */
-  public buildReverseMappings(mapping: IMapping): Array<IMapping> {
+  private buildOpenApiReverseMappings(mapping: IOpenApiMapping): Array<IOpenApiMapping> {
     return mapping.targetIds.map(targetId => ({
       id: undefined,
       sourceId: targetId,
@@ -123,6 +205,24 @@ export class MappingService {
       type: MappingType.REVERSE,
       requestMapping: this.reverseTransformation([targetId, mapping.sourceId], mapping.requestMapping),
       responseMapping: this.reverseTransformation([targetId, mapping.sourceId], mapping.responseMapping)
+    }));
+  }
+
+  private buildAsyncApiReverseMappings(mapping: IAsyncApiMapping): Array<IAsyncApiMapping> {
+    return mapping.targetIds.map(targetId => ({
+      id: undefined,
+      sourceId: targetId,
+      targetIds: [mapping.sourceId],
+      createdBy: mapping.createdBy,
+      type: MappingType.REVERSE,
+      topics: {
+        source: mapping.topics.targets[targetId],
+        targets: {
+          [mapping.sourceId]: mapping.topics.source
+        }
+      },
+      messageMappings: { [mapping.sourceId]: this.reverseTransformation([targetId, mapping.sourceId], mapping.messageMappings[targetId]) },
+      direction: mapping.direction
     }));
   }
 
@@ -138,18 +238,24 @@ export class MappingService {
 
     //Loop over each entry in the JSONata mapping
     const reversedMapping = Object.entries(transformationObject).reduce((reversed, [key, value]) => {
-      //The mapping is only relevant if both that eky and the value side of the mapping refer to an API inside the prefixes
+      const simple = value.match(/(^\$(\."(\w|-)+")+$)|(^(\w|\.)*$)/g) && !(value === "true" || value === "false" || !Number.isNaN(Number.parseFloat(value)));
+      if (!simple) return reversed;
+
+      //Deconstruct escaped keys
+      if (value.startsWith('$')) {
+        value = value.split('.').slice(1).map(v => v.slice(1, -1)).join('.')
+      }
+      //The mapping is only relevant if both that key and the value side of the mapping refer to an API inside the prefixes
       const relevant = prefixes.some(p => key.startsWith(p)) && prefixes.some(p => value.startsWith(p));
       //A mapping is only simple, if it containes no logic at all so it simply maps one key to another one
-      const simple = value.match(/^(\w|\.)*$/g) && !(value === "true" || value === "false" || !Number.isNaN(Number.parseFloat(value)));
       //We only revert mapping entries that are simpel and relevant
-      if (simple && relevant) {
-        return {
-          ...reversed,
-          [value]: key,
-        }
+      if (!relevant) return reversed;
+
+      return {
+        ...reversed,
+        [value]: buildJSONataKey(key.split('.')),
       }
-      return reversed;
+
     }, {});
 
     return JSON.stringify(unflatten(reversedMapping));
@@ -159,7 +265,7 @@ export class MappingService {
    * Creates a JSONata mapping from an arrray of mapping pairs
    * @param mappingPairs A list of mapping pairs that will build the transformation
    */
-  private mappingPairsToTrans(mappingPairs: Array<IMappingPair>, direction: MappingDirection) {
+  private mappingPairsToTrans(mappingPairs: Array<IMappingPair>) {
     return unflatten(mappingPairs.reduce((obj, p) => {
       obj[p.required.join('.')] = p.mappingCode;
       return obj;
@@ -172,7 +278,15 @@ export class MappingService {
    * @param provided The provided interface
    * @param required The reuired interface
    */
-  public buildSameMappingPairs(provided: any, required: any): Array<IMappingPair> {
+  public buildSameMappingPairs(provided: any, required: any, split: boolean = false): Array<IMappingPair> {
+    if (split) {
+      return this.buildSameMappingPairsSplit(provided, required);
+    } else {
+      return this.buildSameMappingPairsNoSplit(provided, required);
+    }
+  }
+
+  private buildSameMappingPairsNoSplit(provided: any, required: any) {
     const mappingPairs = new Map<string, IMappingPair>();
 
     const flatProvided = flatten(provided);
@@ -194,7 +308,7 @@ export class MappingService {
             }
           } else {
             mappingPair = {
-              mappingCode: providedKey,
+              mappingCode: buildJSONataKey(providedKey.split('.')),
               provided: [providedKey.split('.')],
               required: requiredKey.split('.')
             }
@@ -207,17 +321,42 @@ export class MappingService {
     return [...mappingPairs.values()];
   }
 
+  private buildSameMappingPairsSplit(provided: any, required: any) {
+    const mappingPairs = new Array<IMappingPair>();
+
+    const flatProvided = flatten(provided);
+    const flatRequired = flatten(required);
+
+    for (const providedKey of Object.keys(flatProvided)) {
+      for (const requiredKey of Object.keys(flatRequired)) {
+        const unprefixedProvidedKey = providedKey.substr(providedKey.indexOf('.') + 1);
+        const unprefixedRequiredKey = requiredKey.substr(requiredKey.indexOf('.') + 1);
+
+        if (unprefixedProvidedKey === unprefixedRequiredKey) {
+          const mappingPair = {
+            mappingCode: buildJSONataKey(providedKey.split('.')),
+            provided: [providedKey.split('.')],
+            required: requiredKey.split('.')
+          }
+          mappingPairs.push(mappingPair);
+        }
+      }
+    }
+
+    return mappingPairs;
+  }
+
   /**
    * Create mapping pairs based on a source and target interface, taking transitive chains into account
    *
    * @param source The source interface
    * @param targets The target interfaces
    */
-  public async buildMappingPairs(source: IInterface, targets: { [key: string]: IInterface }): Promise<{ request: Array<IMappingPair>, response: Array<IMappingPair> }> {
+  public async buildOpenApiMappingPairs(source: IOpenApiInterface, targets: { [key: string]: IOpenApiInterface }): Promise<{ request: Array<IMappingPair>, response: Array<IMappingPair> }> {
     const sourceId = `${source.api.id}_${source.operationId}_${source.responseId}`;
     const targetIds = Object.keys(targets);
 
-    const mappings: { [key: string]: ParsedMapping[] } = (await this.getMappings()).reduce((obj, m) => {
+    const mappings: { [key: string]: ParsedOpenApiMapping[] } = (await this.getOpenApiMappings()).reduce((obj, m) => {
       const flatRequestMapping: { [key: string]: string } = flatten(JSON.parse(m.requestMapping));
 
       const requestMapping = {};
@@ -227,7 +366,6 @@ export class MappingService {
         requestMapping[key] = operatorsRegex.test(value) ? `(${value})` : value;
         requestMappingInputKeys[key] = getinputs(`{"${key}": ${value}}`).getInputs({}) as string[];
       }
-
 
       const flatResponseMapping: { [key: string]: string } = flatten(JSON.parse(m.responseMapping));
 
@@ -254,7 +392,7 @@ export class MappingService {
         }
       }
 
-      const parsedMapping: ParsedMapping = {
+      const parsedMapping: ParsedOpenApiMapping = {
         ...m,
         requestMapping,
         requestMappingInputKeys,
@@ -269,9 +407,9 @@ export class MappingService {
     }, {});
     //For each of the target APIs, create trees that start at the source API and end at the specific target API.
     //Finally, flat-map all those trees into one array
-    let mappingTrees = [];
+    let mappingTrees: OpenApiTree[] = [];
     for (let i = 0; i < targetIds.length; i++) {
-      const result = this.treeSearch(sourceId, targetIds[i], mappings);
+      const result = this.treeSearch(sourceId, targetIds[i], mappings) as OpenApiTree[];
       mappingTrees = [...mappingTrees, ...result];
     }
 
@@ -285,7 +423,7 @@ export class MappingService {
 
     //Now we build the final mappings by executing each identified mapping tree. The results get merged together into one request and response mapping.
     for (let i = 0; i < mappingTrees.length; i++) {
-      const { requestMapping: reqMap, responseMapping: resMap, break: breakLoop } = this.executeMappingTree(mappingTrees[i], requiredSourceKeys, requiredTargetKeys);
+      const { requestMapping: reqMap, responseMapping: resMap, break: breakLoop } = this.executeOpenApiMappingTree(mappingTrees[i], requiredSourceKeys, requiredTargetKeys);
       responseMapping = { ...responseMapping, ...resMap };
       requestMapping = { ...requestMapping, ...reqMap };
       if (breakLoop) break;
@@ -302,9 +440,96 @@ export class MappingService {
     responseMapping = unflatten(responseMapping);
 
     return {
-      request: this.transToMappingPairs(requestMapping, MappingDirection.INPUT),
-      response: this.transToMappingPairs(responseMapping, MappingDirection.OUTPUT)
+      request: this.transToMappingPairs(requestMapping),
+      response: this.transToMappingPairs(responseMapping)
     }
+  }
+
+  public async buildAsyncApiMappingPairs(source: IAsyncApiInterface, targets: { [key: string]: IAsyncApiInterface }, direction: MappingDirection): Promise<Array<IMappingPair>> {
+    const sourceId = `${source.api.id}_${source.operationId}`;
+    const targetIds = Object.keys(targets);
+
+    const mappings: { [key: string]: ParsedAsyncApiMapping[] } = (await this.getAsyncApiMappings({ direction })).reduce((obj, m) => {
+      const messageMappings: { [targetId: string]: { [key: string]: string } } = {};
+      const messageMappingsInputKeys: { [targetId: string]: { [key: string]: string[] } } = {};
+      for (const targetId in m.messageMappings) {
+        const flattened = flatten(JSON.parse(m.messageMappings[targetId]));
+        messageMappings[targetId] = {};
+        messageMappingsInputKeys[targetId] = {};
+
+        for (const key in flattened) {
+          const value = flattened[key];
+          messageMappings[targetId][key] = operatorsRegex.test(value) ? `(${value})` : value;
+          messageMappingsInputKeys[targetId][key] = getinputs(`{"${key}": ${value}}`).getInputs({}) as string[];
+        }
+      }
+
+      const parsedMapping: ParsedAsyncApiMapping = {
+        ...m,
+        messageMappings,
+        messageMappingsInputKeys
+      };
+
+      return {
+        ...obj,
+        [parsedMapping.sourceId]: [...(obj[parsedMapping.sourceId] || []), parsedMapping]
+      }
+    }, {});
+
+    //TODO: Reenable as soon as concurrency bug is fixed
+    // const [requiredSourceKeys, requiredTargetKeys] = await Promise.all([
+    //   this.validationService.getSourceMessageBody(source).then(b => flatten(b)).then(f => Object.keys(f)),
+    //   this.validationService.getTargetMessageBodies(targets).then(b => flatten(b)).then(f => Object.keys(f))
+    // ]);
+    const requiredSourceKeys = await this.validationService.getSourceMessageBody(source).then(b => flatten(b)).then(f => Object.keys(f));
+    const requiredTargetKeys = await this.validationService.getTargetMessageBodies(targets).then(b => flatten(b)).then(f => Object.keys(f));
+
+    let messageMappings: { [targetId: string]: { [key: string]: string } } = {};
+
+    //For each of the target APIs, create trees that start at the source API and end at the specific target API.
+    //Finally, flat-map all those trees into one array
+    for (let i = 0; i < targetIds.length; i++) {
+      const mappingTrees = this.treeSearch(sourceId, targetIds[i], mappings) as AsyncApiTree[];
+
+      let subresult: { [key: string]: string } = {}
+      if (direction === MappingDirection.INPUT) {
+        for (let j = 0; j < mappingTrees.length; j++) {
+          const { messageMappings: msgMap, break: breakLoop } = this.executeAsyncApiMappingTreeSubscribe(mappingTrees[j], requiredSourceKeys);
+          subresult = { ...subresult, ...msgMap[targetIds[i]] };
+          if (breakLoop) break;
+        }
+
+        //Clean mapping
+        for (const key in subresult) {
+          if (key.indexOf(sourceId) !== 0) {
+            delete subresult[key];
+          }
+        }
+      } else if (direction === MappingDirection.OUTPUT) {
+        for (let j = 0; j < mappingTrees.length; j++) {
+          const { messageMapping: msgMap, break: breakLoop } = this.executeAsyncApiMappingTreePublish(mappingTrees[j], targetIds[i], requiredTargetKeys);
+          subresult = { ...subresult, ...msgMap };
+          if (breakLoop) break;
+        }
+
+        //Clean mapping
+        for (const key in subresult) {
+          if (!targetIds.some(tId => key.indexOf(tId) === 0)) {
+            delete subresult[key];
+          }
+        }
+      }
+
+      messageMappings = { ...messageMappings, [targetIds[i]]: subresult };
+    }
+
+    const mappingPairs: Array<IMappingPair> = [];
+    for (const targetId in messageMappings) {
+      const singleMapping = unflatten(messageMappings[targetId]);
+      mappingPairs.push(...this.transToMappingPairs(singleMapping));
+    }
+
+    return mappingPairs;
   }
 
   /**
@@ -318,9 +543,9 @@ export class MappingService {
    * @param mappings A list of all existing mappings
    * @param visitedApis A list of APIs (i.e. vertices) that were already visited
    */
-  private treeSearch(sourceId: string, finalTragetId: string, mappings: { [key: string]: ParsedMapping[] }, visitedApis: Array<string> = []): Tree[] {
+  private treeSearch(sourceId: string, finalTragetId: string, mappings: { [key: string]: (ParsedOpenApiMapping | ParsedAsyncApiMapping)[] }, visitedApis: Array<string> = []): Tree[] {
     //From all mappings, get the ones that match the source ID and that have not yet been visited
-    const sources = mappings[sourceId];
+    const sources = mappings[sourceId] || [];
 
     const result: Tree[] = [];
     //This double loop makes it so that each 1:n mapping is treated somewhat like a 1:1 mapping
@@ -351,12 +576,12 @@ export class MappingService {
    * Creates an array of mapping pairs from an jsonata input
    * @param transformation The JSONata transformation as object
    */
-  private transToMappingPairs(transformation: any, direction: MappingDirection, keyChain: Array<string> = []): Array<IMappingPair> {
+  private transToMappingPairs(transformation: any, keyChain: Array<string> = []): Array<IMappingPair> {
     const result = new Array<IMappingPair>();
 
     for (const key in transformation) {
       if (typeof transformation[key] === "object" && !(transformation[key] instanceof Array)) {
-        result.push(...this.transToMappingPairs(transformation[key], direction, [...keyChain, key]));
+        result.push(...this.transToMappingPairs(transformation[key], [...keyChain, key]));
       } else {
         const inputs = getinputs(`{"${key}": ${transformation[key]}}`).getInputs({});
         const uniqueInputs = inputs.filter((k, i) => inputs.lastIndexOf(k) === i);
@@ -388,7 +613,9 @@ export class MappingService {
    */
   private performResponseMapping(input: { [key: string]: string }, mapping: { [key: string]: string }, mappingInputKeys: { [key: string]: string[] }) {
     const inputKeys = Object.keys(input);
-    const regex = new RegExp(inputKeys.join('|'), 'g');
+    const simpleRegex = new RegExp(inputKeys.join('|'), 'g');
+    const extendedInputKeys = inputKeys.map(k => `\\$$\\.${k.split('.').map(p => `"${p}"`).join('\\.')}`);
+    const extendedRegex = new RegExp(extendedInputKeys.join('|'), 'g');
 
     const result: { [key: string]: string } = {};
 
@@ -399,7 +626,11 @@ export class MappingService {
         continue;
       }
 
-      result[key] = mapping[key].replace(regex, (match) => input[match]);
+      result[key] = mapping[key].replace(simpleRegex, (match) => input[match]);
+      result[key] = result[key].replace(extendedRegex, (match) => {
+        const resultingKey = match.split('.').slice(1).map(v => v.slice(1, -1)).join('.')
+        return input[resultingKey];
+      });
     }
 
     return result;
@@ -407,13 +638,46 @@ export class MappingService {
 
   private performRequestMapping(input: { [key: string]: string }, mapping: { [key: string]: string }) {
     const inputKeys = Object.keys(input);
-    const regex = new RegExp(inputKeys.join('|'), 'g');
+    const simpleRegex = new RegExp(inputKeys.join('|'), 'g');
+    const extendedInputKeys = inputKeys.map(k => `\\$$\\.${k.split('.').map(p => `"${p}"`).join('\\.')}`);
+    const extendedRegex = new RegExp(extendedInputKeys.join('|'), 'g');
 
     const result: { [key: string]: string } = {};
 
     //For each entry in the mapping, try to replace a key from the input with a value from the input
     for (const key in mapping) {
-      result[key] = mapping[key].replace(regex, (match) => input[match]);
+      result[key] = mapping[key].replace(simpleRegex, (match) => input[match]);
+      result[key] = result[key].replace(extendedRegex, (match) => {
+        const resultingKey = match.split('.').slice(1).map(v => v.slice(1, -1)).join('.')
+        return input[resultingKey];
+      });
+    }
+
+    return result;
+  }
+
+  private performMessageMapping(input: { [targetId: string]: { [key: string]: string } }, mapping: { [key: string]: string }) {
+    const targetIds = Object.keys(input);
+    const result: { [targetId: string]: { [key: string]: string } } = {};
+
+    for (let i = 0; i < targetIds.length; i++) {
+      const inputKeys = Object.keys(input[targetIds[i]]);
+      const simpleRegex = new RegExp(inputKeys.join('|'), 'g');
+      const extendedInputKeys = inputKeys.map(k => `\\$\\.${k.split('.').map(p => `"${p}"`).join('\\.')}`);
+      const extendedRegex = new RegExp(extendedInputKeys.join('|'), 'g');
+
+      const subresult: { [key: string]: string } = {};
+
+      //For each entry in the mapping, try to replace a key from the input with a value from the input
+      for (const key in mapping) {
+        subresult[key] = mapping[key].replace(simpleRegex, (match) => input[targetIds[i]][match]);
+        subresult[key] = subresult[key].replace(extendedRegex, (match) => {
+          const resultingKey = match.split('.').slice(1).map(v => v.slice(1, -1)).join('.')
+          return input[targetIds[i]][resultingKey];
+        });
+      }
+
+      result[targetIds[i]] = subresult;
     }
 
     return result;
@@ -427,7 +691,7 @@ export class MappingService {
    * @param targetIds The IDs of all target APIs, required for filtering
    * @param requestInput The processed request mapping so far (required, as it needs to be passed downards the tree)
    */
-  private executeMappingTree(mappingTree: Tree, requiredSourceKeys: string[], requiredTargetKeys: string[], requestInput?: { [key: string]: string }) {
+  private executeOpenApiMappingTree(mappingTree: OpenApiTree, requiredSourceKeys: string[], requiredTargetKeys: string[], requestInput?: { [key: string]: string }): { responseMapping: { [key: string]: string }, requestMapping: { [key: string]: string }, break?: boolean } {
     const { node, children } = mappingTree;
 
     //The request mapping that is passed back from the leafs to the root
@@ -453,7 +717,7 @@ export class MappingService {
     let responseInput: { [key: string]: string } = {};
     //Current element is not a leaf, so we continue the recursion
     for (let i = 0; i < children.length; i++) {
-      const result = this.executeMappingTree(children[i], requiredSourceKeys, requiredTargetKeys, newRequestInput);
+      const result = this.executeOpenApiMappingTree(children[i], requiredSourceKeys, requiredTargetKeys, newRequestInput);
       if (result.break) {
         return result;
       }
@@ -480,10 +744,59 @@ export class MappingService {
     return { responseMapping, requestMapping, break: requestMappingValid && responseMappingValid };
   }
 
-}
+  private executeAsyncApiMappingTreeSubscribe(mappingTree: AsyncApiTree, requiredKeys: string[]): { messageMappings: { [targetId: string]: { [key: string]: string } }, break?: boolean } {
+    const { node, children } = mappingTree;
 
-export enum MappingDirection {
-  INPUT, OUTPUT
+    if (children === undefined) {
+      return { messageMappings: node.messageMappings };
+    }
+
+    const messageMappings: { [targetId: string]: { [key: string]: string } } = {};
+
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      const result = this.executeAsyncApiMappingTreeSubscribe(child, requiredKeys);
+      if (result.break) {
+        return result;
+      }
+      const msgMappings = this.performMessageMapping(result.messageMappings, node.messageMappings[child.node.sourceId]);
+      for (const targetId in msgMappings) {
+        messageMappings[targetId] = { ...(messageMappings[targetId] || {}), ...msgMappings[targetId] };
+      }
+    }
+
+    const providedMappingKeys = Object.values(messageMappings).map(m => Object.keys(m));
+    //For all provided keys of all mappings
+    const messageMappingValid = providedMappingKeys.every(providedKeys => requiredKeys.every(key => providedKeys.includes(key)))
+
+    return { messageMappings, break: messageMappingValid };
+  }
+
+  private executeAsyncApiMappingTreePublish(mappingTree: AsyncApiTree, finalTargetId: string, requiredKeys: string[]): { messageMapping: { [key: string]: string }, break?: boolean } {
+    const { node, children } = mappingTree;
+
+    if (children === undefined) {
+      return { messageMapping: node.messageMappings[finalTargetId] };
+    }
+
+    let messageMapping: { [key: string]: string } = {};
+
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      const result = this.executeAsyncApiMappingTreePublish(child, finalTargetId, requiredKeys);
+      if (result.break) {
+        return result;
+      }
+      const msgMappings = this.performRequestMapping(node.messageMappings[child.node.sourceId], result.messageMapping);
+      messageMapping = { ...messageMapping, ...msgMappings };
+    }
+
+    const providedMappingKeys = Object.keys(messageMapping);
+    const messageMappingValid = requiredKeys.every(key => providedMappingKeys.includes(key))
+
+    return { messageMapping, break: messageMappingValid };
+  }
+
 }
 
 /**
@@ -495,4 +808,12 @@ export enum MappingDirection {
 export function stringifyedToJsonata(obj: string) {
   const keyValueRegex = /(?:\"|\')([^"]*)(?:\"|\')(?=:)(?:\:\s*)(?:\"|\')?(true|false|(?:[^"]|\\\")*)(?:"(?=\s*(,|})))/g;
   return obj.replace(keyValueRegex, '"$1":$2').replace(/\\\"/g, '"');
+}
+
+export function buildJSONataKey(keyChain: KeyChain): string {
+  const needsEscaping = keyChain.some(k => k.includes('-'));
+  if (!needsEscaping) {
+    return keyChain.join('.');
+  }
+  return `$.${keyChain.map(k => `"${k}"`).join('.')}`;
 }

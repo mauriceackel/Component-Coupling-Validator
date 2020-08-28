@@ -1,6 +1,7 @@
 import { Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { KeyChain } from '~/app/services/jsontree.service';
+import { buildJSONataKey } from '~/app/services/mapping.service';
 
 @Component({
   templateUrl: './transformation-dialog.component.html'
@@ -16,7 +17,7 @@ export class TransformationDialog implements OnInit {
     private dialogRef: MatDialogRef<TransformationDialog>
   ) {
     this.mappingCode = data.mappingCode;
-    this.keys = data.keys.map(kC => kC.join('.'))
+    this.keys = data.keys.map(kC => buildJSONataKey(kC))
   }
 
   public insertKey(key: string) {
