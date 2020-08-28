@@ -1,16 +1,17 @@
 import { logger, sleep } from "../Service";
 import { AdapterType } from "../models/AdapterModel";
-import { IMapping } from "../models/MappingModel";
+import { IOpenApiMapping } from "../models/MappingModel";
 import { exec } from "child_process";
 import { STORAGE_PATH } from "../config/Config";
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
-import * as ApiService from '../services/ApiService';
-import { IApi } from "../models/ApiModel";
+import * as ApiService from './ApiService';
+import { IOpenApi } from "../models/ApiModel";
 import { camelcase } from "../utils/camelcase";
 import Zip from "adm-zip";
+import { escapeQuote, stringifyedToJsonata } from "../utils/sanitize";
 
-export async function createAdapter(adapterType: AdapterType, mapping: IMapping): Promise<string> {
+export async function createAdapter(adapterType: AdapterType, mapping: IOpenApiMapping): Promise<string> {
   logger.info(`Trying to create adapter for type: ${adapterType}`);
 
   const adapterTypeKeys: string[] = Object.keys(AdapterType)
@@ -29,8 +30,8 @@ export async function createAdapter(adapterType: AdapterType, mapping: IMapping)
 
   logger.info(`Loading APIs`);
   const [source, ...targets] = await Promise.all([
-    ApiService.getApi(sourceApiId),
-    ...targetOperations.map(api => ApiService.getApi(api.apiId))
+    ApiService.getOpenApi(sourceApiId),
+    ...targetOperations.map(api => ApiService.getOpenApi(api.apiId))
   ]);
 
   const fileId = uuidv4();
@@ -63,7 +64,7 @@ export async function createAdapter(adapterType: AdapterType, mapping: IMapping)
 }
 
 async function createJavaScriptAdapter(
-  filePath: string, mapping: IMapping,
+  filePath: string, mapping: IOpenApiMapping,
   sourceOperation: { apiId: string; operationId: string; responseId: string; },
   targetOperations: { apiId: string; operationId: string; responseId: string; }[]
 ) {
@@ -138,19 +139,4 @@ async function generateOpenApiInterface(generator: string, path: string, options
     child.on('close', resolve);
     child.on('error', reject);
   })
-}
-
-/**
-   * Method that takes a stringified JSON object as input and removes the quotes of all string properties.
-   *
-   * Exmaple:
-   * { "foo":"bar" } --> { "foo":bar }
-   */
-export function stringifyedToJsonata(obj: string) {
-  const keyValueRegex = /(?:\"|\')([^"]*)(?:\"|\')(?=:)(?:\:\s*)(?:\"|\')?(true|false|(?:[^"]|\\\")*)(?:"(?=\s*(,|})))/g;
-  return obj.replace(keyValueRegex, '"$1":$2').replace(/\\\"/g, '"');
-}
-
-function escapeQuote(input: string) {
-  return input.replace(/"/g, "\\\"")
 }

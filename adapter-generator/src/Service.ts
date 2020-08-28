@@ -1,6 +1,7 @@
 import Express, { Application } from 'express';
 import bodyParser from 'body-parser';
-import AdapterController from './controller/AdapterController';
+import OpenApiAdapterController from './controller/OpenApiAdapterController';
+import AsyncApiAdapterController from './controller/AsyncApiAdapterController';
 import FileController from './controller/FileController';
 import * as Config from './config/Config';
 import https from 'https';
@@ -176,7 +177,8 @@ export class Service {
       this.express.use(bodyParser.raw());
 
       //Register routes with no or only partial authentication
-      this.express.use('/create-adapter', AdapterController);
+      this.express.use('/open-api/create-adapter', OpenApiAdapterController);
+      this.express.use('/async-api/create-adapter', AsyncApiAdapterController);
       this.express.use('/download', FileController);
 
       //If no validation checks failed before, give the OK to the API Gateway

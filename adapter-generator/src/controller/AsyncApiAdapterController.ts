@@ -2,8 +2,8 @@ import { Request, Response, Router } from 'express'
 import { NextFunction } from 'connect';
 import { ErrorResponse, ApiResponse, SuccessResponse } from '../utils/responses/ApiResponse';
 import { AdapterResponse } from '../utils/responses/AdapterResponse';
-import * as AdapterService from '../services/AdapterService';
-import { IMapping } from '../models/MappingModel';
+import * as AdapterService from '../services/AsyncApiAdapterService';
+import { IAsyncApiMapping } from '../models/MappingModel';
 import { logger } from '../Service';
 import { AdapterType } from '../models/AdapterModel';
 
@@ -11,7 +11,7 @@ const router: Router = Router();
 
 router.post('/:adapterType', createAdapter);
 async function createAdapter(req: Request, res: Response, next: NextFunction) {
-    const body: { mapping: IMapping } = req.body;
+    const body: { mapping: IAsyncApiMapping } = req.body;
 
     let response: ApiResponse;
     if (body.mapping) {

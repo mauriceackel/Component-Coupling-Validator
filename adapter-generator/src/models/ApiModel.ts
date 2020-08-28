@@ -6,5 +6,12 @@ export interface IApi {
     company?: string
     keywords?: string
   }
-  openApiSpec: string
+}
+
+export interface IAsyncApi extends IApi {
+  asyncApiSpec: string
+}
+
+export interface IOpenApi extends IApi {
+  openApiSpec: any
 }

@@ -1,7 +1,12 @@
-import { IApi } from './ApiModel';
+import { IAsyncApi, IOpenApi } from './ApiModel';
 
-export interface IInterface {
-  api: IApi,
+export interface IAsyncApiInterface {
+  api: IAsyncApi,
+  operationId: string,
+}
+
+export interface IOpenApiInterface {
+  api: IOpenApi,
   operationId: string,
   responseId: string
 }
