@@ -20,12 +20,18 @@
     ],
     "paths": {
       "~/*": [
-          "src/*"
+        "src/*"
+      ],
+      "os": [
+        "node_modules/os-browserify/main.js"
+      ],
+      "path": [
+        "node_modules/path-browserify/index.js"
       ]
     }
   },
   "angularCompilerOptions": {
     "fullTemplateTypeCheck": true,
     "strictInjectionParameters": true
-  },
+  }
 }
