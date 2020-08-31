@@ -1,7 +1,7 @@
 import { Injectable } from "@angular/core";
 import { IOpenApiInterface } from '../models/openapi-interface.model';
 import { IOpenApiMapping } from '../models/openapi-mapping.model';
-import { OpenApiValidationError } from '../utils/errors/validation-error';
+import { OpenApiValidationError, AsyncApiValidationError } from '../utils/errors/validation-error';
 import { getRequestSchema, getResponseSchema } from '../utils/swagger-parser';
 import { flatten, unflatten } from 'flat';
 import { KeyChain } from './jsontree.service';
@@ -82,13 +82,15 @@ export class ValidationService {
       // Each target-prop needs to be mapped
       const targetBodies = await this.getTargetMessageBodies(targets);
       for(const targetId of Object.keys(targets)) {
-        missing.push(...this.findMissing(JSON.parse(mapping.messageMappings[targetId] || "{}"), targetBodies[targetId]));
+        //We only require a match for one specific targetId, but we need to prefix it again so that the keys match
+        const required = { [targetId]: targetBodies[targetId] };
+        missing.push(...this.findMissing(JSON.parse(mapping.messageMappings[targetId] || "{}"), required));
       }
     }
 
     if (missing.length > 0) {
       const errorMessage = "Missing message mappings\n" + missing.map(m => m.join('.')).join(', ');
-      throw new OpenApiValidationError(errorMessage, missing);
+      throw new AsyncApiValidationError(errorMessage, missing);
     }
   }
 

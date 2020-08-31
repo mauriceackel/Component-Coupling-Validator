@@ -12,7 +12,7 @@ import { ApiService } from '~/app/services/api.service';
 import { MappingService } from '~/app/services/mapping.service';
 import { TaskService } from '~/app/services/task.service';
 import { ValidationService } from '~/app/services/validation.service';
-import { OpenApiValidationError } from '~/app/utils/errors/validation-error';
+import { OpenApiValidationError, AsyncApiValidationError } from '~/app/utils/errors/validation-error';
 import { ButtonType, GenericDialog } from '~/app/utils/generic-dialog/generic-dialog.component';
 import { getOperationTemplates, getMessageSchema, IAsyncApiOperationTemplate } from '~/app/utils/asyncapi-parser';
 import { AdapterService, AdapterType } from '~/app/services/adapter.service';
@@ -49,7 +49,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
   public mappingPairs: Array<IMappingPair>;
 
-  public mappingError: OpenApiValidationError;
+  public mappingError: AsyncApiValidationError;
 
   private subscriptions: Array<Subscription>;
 
@@ -241,7 +241,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
   public async buildAdapter() {
     try {
       if (this.mappingPairs.some(mp => !mp.mappingCode)) {
-        throw new OpenApiValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")
+        throw new AsyncApiValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")
       }
 
       const direction = this.inputForm.get('publish').value ? MappingDirection.OUTPUT : MappingDirection.INPUT;
@@ -258,7 +258,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
       window.open(downloadLink, "_blank");
     } catch (err) {
-      if (err instanceof OpenApiValidationError) {
+      if (err instanceof AsyncApiValidationError) {
         this.mappingError = err;
         return;
       }
@@ -291,7 +291,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
       }
 
     } catch (err) {
-      if (err instanceof OpenApiValidationError) {
+      if (err instanceof AsyncApiValidationError) {
         this.mappingError = err;
         return;
       }
