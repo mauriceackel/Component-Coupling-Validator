@@ -474,13 +474,10 @@ export class MappingService {
       }
     }, {});
 
-    //TODO: Reenable as soon as concurrency bug is fixed
-    // const [requiredSourceKeys, requiredTargetKeys] = await Promise.all([
-    //   this.validationService.getSourceMessageBody(source).then(b => flatten(b)).then(f => Object.keys(f)),
-    //   this.validationService.getTargetMessageBodies(targets).then(b => flatten(b)).then(f => Object.keys(f))
-    // ]);
-    const requiredSourceKeys = await this.validationService.getSourceMessageBody(source).then(b => flatten(b)).then(f => Object.keys(f));
-    const requiredTargetKeys = await this.validationService.getTargetMessageBodies(targets).then(b => flatten(b)).then(f => Object.keys(f));
+    const [requiredSourceKeys, requiredTargetKeys] = await Promise.all([
+      this.validationService.getSourceMessageBody(source).then(b => flatten(b)).then(f => Object.keys(f)),
+      this.validationService.getTargetMessageBodies(targets).then(b => flatten(b)).then(f => Object.keys(f))
+    ]);
 
     let messageMappings: { [targetId: string]: { [key: string]: string } } = {};
 
