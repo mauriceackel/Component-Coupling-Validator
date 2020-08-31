@@ -174,8 +174,6 @@ export class MappingService {
       }
     }, {})
 
-    console.log(targets);
-    console.log(Object.entries(targets).reduce((obj, [targetId, value]) => ({...obj, [targetId]: value.url}), {}));
     return {
       id: undefined,
       createdBy: this.identificationService.User.uid,
