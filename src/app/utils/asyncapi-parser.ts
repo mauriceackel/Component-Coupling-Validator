@@ -38,12 +38,13 @@ export async function getOperationTemplates(api: IAsyncApi, publish: boolean) {
   for (const url of apiObject.channelNames()) {
     const channel = apiObject.channel(url);
 
-    if (publish && channel.hasPublish()) {
+    //This is inverted, as publishing a message from the client means that the channel has a subscribe operation for it and vice versa
+    if (!publish && channel.hasPublish()) {
       const operation = channel.publish();
       operationTemplates.push({ operationId: operation.id(), url });
     }
 
-    if (!publish && channel.hasSubscribe()) {
+    if (publish && channel.hasSubscribe()) {
       const operation = channel.subscribe();
       operationTemplates.push({ operationId: operation.id(), url });
     }
@@ -89,10 +90,11 @@ export async function getMessageSchema(api: IAsyncApi, searchOperation: IAsyncAp
   const message = op.operation.message();
 
   try {
+    const parameters = Object.entries(op.channel.parameters()).reduce((params, [key, value]) => ({ ...params, [key]: removeTypes(flattenSchema(value.json())) }), {});
     const headers = removeTypes(flattenSchema(message.headers().json()));
     const payload = removeTypes(flattenSchema(message.payload().json()));
 
-    return { headers, payload };
+    return { parameters, headers, payload };
   } catch (err) {
     console.log(message, err);
   }
