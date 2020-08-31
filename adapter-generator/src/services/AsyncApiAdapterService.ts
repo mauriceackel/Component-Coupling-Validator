@@ -77,7 +77,7 @@ async function createJavaScriptAdapter(
   for (const target of targetOperations) {
     const generator = new AsyncApiGenerator('./asyncapi-generator/target-template', `${filePath}/targets/${target.apiId}`, {
       templateParams: {
-        //TODO: Make dynamic serve
+        //TODO: Make dynamic server
         server: 'production',
       }
     });
