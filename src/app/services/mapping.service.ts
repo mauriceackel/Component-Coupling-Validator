@@ -531,7 +531,13 @@ export class MappingService {
     const mappingPairs: Array<IMappingPair> = [];
     for (const targetId in messageMappings) {
       const singleMapping = unflatten(messageMappings[targetId]);
-      mappingPairs.push(...this.transToMappingPairs(singleMapping));
+      const pairs = this.transToMappingPairs(singleMapping);
+      for (let i = 0; i < pairs.length; i++) {
+        if (pairs[i].provided.length === 0) {
+          pairs[i].provided.push([targetId]);
+        }
+      }
+      mappingPairs.push(...pairs);
     }
 
     return mappingPairs;

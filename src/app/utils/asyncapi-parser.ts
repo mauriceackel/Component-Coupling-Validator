@@ -90,11 +90,24 @@ export async function getMessageSchema(api: IAsyncApi, searchOperation: IAsyncAp
   const message = op.operation.message();
 
   try {
-    const parameters = Object.entries(op.channel.parameters()).reduce((params, [key, value]) => ({ ...params, [key]: removeTypes(flattenSchema(value.json())) }), {});
-    const headers = removeTypes(flattenSchema(message.headers().json()));
-    const payload = removeTypes(flattenSchema(message.payload().json()));
+    const result: { parameters?: any, headers?: any, payload?: any } = {};
 
-    return { parameters, headers, payload };
+    const parameters = Object.entries(op.channel.parameters()).reduce((params, [key, value]) => ({ ...params, [key]: removeTypes(flattenSchema(value.json())) }), {});
+    if (Object.keys(parameters).length > 0) {
+      result.parameters = parameters;
+    }
+
+    const headers = removeTypes(flattenSchema(message.headers().json()));
+    if (Object.keys(headers).length > 0) {
+      result.headers = headers;
+    }
+
+    const payload = removeTypes(flattenSchema(message.payload().json()));
+    if (Object.keys(payload).length > 0) {
+      result.payload = payload;
+    }
+
+    return result;
   } catch (err) {
     console.log(message, err);
   }
