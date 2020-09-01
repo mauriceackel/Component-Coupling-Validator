@@ -182,7 +182,11 @@ export class MappingService {
       targetIds: Object.keys(targets),
       topics: {
         source: source.url,
-        targets: Object.entries(targets).reduce((obj, [targetId, value]) => ({...obj, [targetId]: value.url}), {})
+        targets: Object.entries(targets).reduce((obj, [targetId, value]) => ({ ...obj, [targetId]: value.url }), {})
+      },
+      servers: {
+        source: source.server,
+        targets: Object.entries(targets).reduce((obj, [targetId, value]) => ({ ...obj, [targetId]: value.server }), {})
       },
       messageMappings,
       direction
@@ -217,6 +221,12 @@ export class MappingService {
         source: mapping.topics.targets[targetId],
         targets: {
           [mapping.sourceId]: mapping.topics.source
+        }
+      },
+      servers: {
+        source: mapping.servers.targets[targetId],
+        targets: {
+          [mapping.sourceId]: mapping.servers.source
         }
       },
       messageMappings: { [mapping.sourceId]: this.reverseTransformation([targetId, mapping.sourceId], mapping.messageMappings[targetId]) },

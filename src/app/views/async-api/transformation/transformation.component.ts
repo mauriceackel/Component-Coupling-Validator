@@ -34,6 +34,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
   public inputForm = new FormGroup({
     'publish': new FormControl(false),
     'mS': new FormControl(undefined, Validators.required),
+    'mSServ': new FormControl(undefined, Validators.required),
     'mSO': new FormControl(undefined, Validators.required),
     'targets': this.targets,
   });
@@ -42,7 +43,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
   public mappingTargets: { [key: string]: IAsyncApiInterface };
 
   public sourceOperations: Array<IAsyncApiOperationTemplate>;
-  public targetOperations: Array<Array<IAsyncApiOperationTemplate>>;
+  public sourceServers: Array<string>;
 
   public sourceMessageBody: any;
   public targetMessageBodies: any;
@@ -73,7 +74,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.mappingTargets = undefined;
 
     this.sourceOperations = [];
-    this.targetOperations = [];
+    this.sourceServers = [];
 
     this.sourceMessageBody = undefined;
     this.targetMessageBodies = undefined;
@@ -92,11 +93,15 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
       if (source) {
         this.sourceMessageBody = {
-          [`${source.api.id}_${source.operationId}`]: await getMessageSchema(source.api, { operationId: source.operationId, url: source.url })
+          [`${source.api.id}_${source.operationId}`]: await getMessageSchema(source.api, { operationId: source.operationId })
         };
       }
     }));
-    this.subscriptions.push(this.inputForm.get('mS').valueChanges.subscribe(async (val: IAsyncApi) => this.sourceOperations = val && await getOperationTemplates(val, this.inputForm.get('publish').value)));
+    this.subscriptions.push(this.inputForm.get('mS').valueChanges.subscribe(async (val: IAsyncApi) => {
+      const { servers, operationTemplates } = val && await getOperationTemplates(val, this.inputForm.get('publish').value);
+      this.sourceOperations = operationTemplates;
+      this.sourceServers = servers;
+    }));
 
     this.subscriptions.push(this.targets.valueChanges.subscribe(async () => {
       const targets = this.parseTargets();
@@ -104,8 +109,8 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
       const message = {};
 
-      for (const [key, value] of Object.entries(targets || {})) {
-        message[key] = await getMessageSchema(value.api, { operationId: value.operationId, url: value.url })
+      for (const [key, { api, operationId }] of Object.entries(targets || {})) {
+        message[key] = await getMessageSchema(api, { operationId });
       }
 
       this.targetMessageBodies = message;
@@ -113,7 +118,10 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
     this.subscriptions.push(this.inputForm.get('publish').valueChanges.subscribe(async (publish: boolean) => {
       const val = this.inputForm.get('mS').value;
-      this.sourceOperations = val && await getOperationTemplates(val, publish);
+      const { servers, operationTemplates } = val && await getOperationTemplates(val, publish);
+
+      this.sourceOperations = operationTemplates;
+      this.sourceServers = servers;
     }));
 
     this.targets.clear();
@@ -129,14 +137,22 @@ export class TransformationComponent implements OnInit, OnDestroy {
     const group = new FormGroup({
       'mT': new FormControl(undefined, Validators.required),
       'mTO': new FormControl(undefined, Validators.required),
-      'operations': new FormControl([])
+      'mTServ': new FormControl(undefined, Validators.required),
+      'operations': new FormControl([]),
+      'servers': new FormControl([]),
     })
     this.subscriptions.push(
-      group.get('mT').valueChanges.subscribe(async (val: IAsyncApi) => group.get('operations').setValue(val && await getOperationTemplates(val, this.inputForm.get('publish').value)))
+      group.get('mT').valueChanges.subscribe(async (val: IAsyncApi) => {
+        const { servers, operationTemplates } = val && await getOperationTemplates(val, this.inputForm.get('publish').value);
+        group.get('operations').setValue(operationTemplates);
+        group.get('servers').setValue(servers);
+      })
     )
     this.subscriptions.push(this.inputForm.get('publish').valueChanges.subscribe(async (publish: boolean) => {
       const val = group.get('mT').value;
-      group.get('operations').setValue(val && await getOperationTemplates(val, publish));
+      const { servers, operationTemplates } = val && await getOperationTemplates(val, publish);
+      group.get('operations').setValue(operationTemplates);
+      group.get('servers').setValue(servers);
     }));
     this.targets.push(group);
   }
@@ -152,20 +168,22 @@ export class TransformationComponent implements OnInit, OnDestroy {
     return {
       api: data.mS,
       operationId: data.mSO.operationId,
-      url: data.mSO.url
+      url: data.mSO.url,
+      server: data.mSServ
     }
   }
 
   private parseTargets(): { [key: string]: IAsyncApiInterface } {
     if (!(this.targets.valid)) return undefined;
 
-    const targets = this.targets.value as Array<{ mT: IAsyncApi, mTO: IAsyncApiOperationTemplate }>;
+    const targets = this.targets.value as Array<{ mT: IAsyncApi, mTServ: string, mTO: IAsyncApiOperationTemplate }>;
     return targets.reduce((obj, target) => ({
       ...obj,
       [`${target.mT.id}_${target.mTO.operationId}`]: {
         api: target.mT,
         operationId: target.mTO.operationId,
-        url: target.mTO.url
+        url: target.mTO.url,
+        server: target.mTServ
       } as IAsyncApiInterface
     }), {})
   }

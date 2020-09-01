@@ -17,7 +17,7 @@
 
             <div class="overflow-hidden">
               <div class="row mt-4">
-                <div class="col d-flex">
+                <div class="col-8 d-flex">
                   <mat-form-field appearance="outline" class="flex-grow-1">
                     <mat-label>Mapping Source</mat-label>
                     <mat-select [disabled]="inputForm.valid" formControlName="mS"
@@ -30,6 +30,16 @@
                       </div>
                       <mat-option *ngFor="let api of apis | filter:sourceSearch.value" [value]="api">
                         {{api.name}}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <div class="col-4 d-flex">
+                  <mat-form-field appearance="outline" class="flex-grow-1">
+                    <mat-label>Source Server</mat-label>
+                    <mat-select [disabled]="inputForm.valid" formControlName="mSServ">
+                      <mat-option *ngFor="let server of sourceServers" [value]="server">
+                        {{server}}
                       </mat-option>
                     </mat-select>
                   </mat-form-field>
@@ -65,7 +75,7 @@
 
             <div class="overflow-hidden">
               <div class="row mt-4">
-                <div class="col d-flex">
+                <div class="col-8 d-flex">
                   <mat-form-field appearance="outline" class="flex-grow-1">
                     <mat-label>Mapping Target</mat-label>
                     <mat-select [disabled]="inputForm.valid" [formControl]="group.get('mT')"
@@ -78,6 +88,16 @@
                       </div>
                       <mat-option *ngFor="let api of apis | filter:targetSearch.value" [value]="api">
                         {{api.name}}
+                      </mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <div class="col-4 d-flex">
+                  <mat-form-field appearance="outline" class="flex-grow-1">
+                    <mat-label>Target Server</mat-label>
+                    <mat-select [disabled]="inputForm.valid" [formControl]="group.get('mTServ')">
+                      <mat-option *ngFor="let server of group.get('servers').value" [value]="server">
+                        {{server}}
                       </mat-option>
                     </mat-select>
                   </mat-form-field>

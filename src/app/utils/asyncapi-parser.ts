@@ -50,7 +50,7 @@ export async function getOperationTemplates(api: IAsyncApi, publish: boolean) {
     }
   }
 
-  return operationTemplates;
+  return {servers: Object.keys(apiObject.servers()), operationTemplates};
 }
 
 export async function getOperation(api: IAsyncApi, operationId: string): Promise<{ url: string, channel: Channel, operation: PublishOperation | SubscribeOperation } | undefined> {
@@ -137,6 +137,5 @@ export interface IAsyncApiOperationTemplate {
 }
 
 export interface IAsyncApiOperation {
-  operationId: string,
-  url: string
+  operationId: string
 }

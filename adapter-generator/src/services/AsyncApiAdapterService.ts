@@ -22,11 +22,11 @@ export async function createAdapter(adapterType: AdapterType, mapping: IAsyncApi
   }
 
   const [sourceApiId, sourceOperationId] = mapping.sourceId.split('_');
-  const sourceOperation = { apiId: sourceApiId, operationId: sourceOperationId, topic: '' };
+  const sourceOperation = { apiId: sourceApiId, operationId: sourceOperationId, topic: '', server: '' };
 
   const targetOperations = mapping.targetIds.map(id => {
     const [targetApiId, targetOperationId] = id.split('_');
-    return { apiId: targetApiId, operationId: targetOperationId, topic: '' };
+    return { apiId: targetApiId, operationId: targetOperationId, topic: '', server: '' };
   });
 
   logger.info(`Loading APIs`);
@@ -36,7 +36,11 @@ export async function createAdapter(adapterType: AdapterType, mapping: IAsyncApi
   ]);
 
   sourceOperation.topic = mapping.topics.source;
-  targetOperations.forEach(t => t.topic = mapping.topics.targets[`${t.apiId}_${t.operationId}`]);
+  sourceOperation.server = mapping.servers.source;
+  targetOperations.forEach(t => {
+    t.topic = mapping.topics.targets[`${t.apiId}_${t.operationId}`];
+    t.server = mapping.servers.targets[`${t.apiId}_${t.operationId}`];
+  });
 
   const fileId = uuidv4();
   const filePath = `${STORAGE_PATH}/${fileId}`;
@@ -69,16 +73,15 @@ export async function createAdapter(adapterType: AdapterType, mapping: IAsyncApi
 
 async function createJavaScriptAdapter(
   filePath: string, mapping: IAsyncApiMapping,
-  sourceOperation: { apiId: string; operationId: string; topic: string; },
-  targetOperations: { apiId: string; operationId: string; topic: string; }[]
+  sourceOperation: { apiId: string; operationId: string; topic: string; server: string },
+  targetOperations: { apiId: string; operationId: string; topic: string; server: string }[]
 ) {
   const targets: { id: string, fullId: string, topic: string, mapping: string }[] = [];
 
   for (const target of targetOperations) {
     const generator = new AsyncApiGenerator('./asyncapi-generator/target-template', `${filePath}/targets/${target.apiId}`, {
       templateParams: {
-        //TODO: Make dynamic server
-        server: 'production',
+        server: target.server,
       }
     });
     const targetPath = `${filePath}/targets/${target.apiId}/apiSpec.json`;
@@ -95,8 +98,7 @@ async function createJavaScriptAdapter(
 
   const generator = new AsyncApiGenerator('./asyncapi-generator/source-template', `${filePath}/source`, {
     templateParams: {
-      //TODO: Make dynamic server
-      server: 'production',
+      server: sourceOperation.server,
       sourceId: `${sourceOperation.apiId}_${sourceOperation.operationId}`,
       sourceTopic: sourceOperation.topic,
       mappingDirection: mapping.direction.toString(),

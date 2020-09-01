@@ -6,6 +6,10 @@ export interface IAsyncApiMapping extends IMapping {
     source: string,
     targets: { [targetId: string]: string }
   }
+  servers: {
+    source: string,
+    targets: { [targetId: string]: string }
+  }
   // The key is the id of the target
   messageMappings: { [key: string]: string } //JSONata mappings
 }
