@@ -35,7 +35,7 @@ export class ValidationService {
   }
 
   public async getTargetMessageBodies(targets: { [key: string]: IAsyncApiInterface }) {
-    const schemaPromises = Object.entries(targets || {}).map(async ([key, value]) => ({ key, schema: await getMessageSchema(value.api, { operationId: value.operationId, url: value.url }, true) }));
+    const schemaPromises = Object.entries(targets || {}).map(async ([key, value]) => ({ key, schema: await getMessageSchema(value.api, { operationId: value.operationId }, true) }));
     return (await Promise.all(schemaPromises)).reduce((obj, { key, schema }) => ({ ...obj, [key]: schema }), {});
   }
 
