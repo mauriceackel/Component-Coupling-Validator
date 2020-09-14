@@ -35,7 +35,7 @@ module.exports = (message, next) => {
   const { payload, headers, topic, params } = message;
   if (topic === sourceTopic) {
     for (const target of targets) {
-      const { payload: mappedPayload, headers: mappedHeaders, parameters: mappedParameters } = jsonata(target.mapping).evaluate({ [sourceId]: { payload, headers, parameters: params } })[targetId];
+      const { payload: mappedPayload, headers: mappedHeaders, parameters: mappedParameters } = jsonata(target.mapping).evaluate({ [sourceId]: { payload, headers, parameters: params } })[target.id];
 
       const paramRegex = new RegExp(`\\{(${Object.keys(mappedParameters).join('|')})\\}`, 'g');
       const resolvedTopic = target.topic.replace(paramRegex, (match, paramName) => mappedParameters[paramName]);

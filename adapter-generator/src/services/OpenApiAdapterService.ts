@@ -45,8 +45,12 @@ export async function createAdapter(adapterType: AdapterType, mapping: IOpenApiM
 
   fs.mkdirSync(`${filePath}/targets/`);
   for (const target of targets) {
-    fs.mkdirSync(`${filePath}/targets/${target.id}/`);
-    fs.writeFileSync(`${filePath}/targets/${target.id}/apiSpec.json`, target.openApiSpec);
+    try {
+      fs.mkdirSync(`${filePath}/targets/${target.id}/`);
+      fs.writeFileSync(`${filePath}/targets/${target.id}/apiSpec.json`, target.openApiSpec);
+    } catch (err) {
+      console.log(err);
+    }
   }
 
   logger.info(`Select adapter generator`);

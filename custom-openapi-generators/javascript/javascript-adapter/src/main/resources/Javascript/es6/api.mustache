@@ -7,7 +7,7 @@ import ApiClient from "../ApiClient";
 <#containsOperation>
 import * as jsonata from 'jsonata';
 <#targets>
-import { <targetApiName> as <targetApiId>TargetApi, ApiClient as <targetApiId>ApiClient } from '<targetApiPath>/src/index';
+import { <targetApiName> as <targetFullId>TargetApi, ApiClient as <targetFullId>ApiClient } from '<targetApiPath>/src/index';
 </targets>
 </containsOperation>
 
@@ -89,12 +89,12 @@ export default class <&classname> {
       const response = {};
 
       <#targets>
-      async function handle<targetApiId>() {
+      async function handle<targetFullId>() {
         async function callTarget(targetInput) {
           const { <targetOptions><#targetHasOptional><#targetOptions>, </targetOptions>...opts</targetHasOptional> } = targetInput;
 
-          const targetApiClient = new <targetApiId>ApiClient();
-          const data = await new <targetApiId>TargetApi(targetApiClient).<targetFunctionName>(<targetOptions><#targetHasOptional><#targetOptions>, </targetOptions>opts</targetHasOptional>);
+          const targetApiClient = new <targetFullId>ApiClient();
+          const data = await new <targetFullId>TargetApi(targetApiClient).<targetFunctionName>(<targetOptions><#targetHasOptional><#targetOptions>, </targetOptions>opts</targetHasOptional>);
 
           return data;
         }
@@ -109,7 +109,7 @@ export default class <&classname> {
       }
       </targets>
 
-      await Promise.all([<#targets>handle<targetApiId>(), </targets>]);
+      await Promise.all([<#targets>handle<targetFullId>(), </targets>]);
 
       const { "<sourceFullId>": sourceOutputData} = jsonata(responseMapping).evaluate(response);
       return { data: sourceOutputData };

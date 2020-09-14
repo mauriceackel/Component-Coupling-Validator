@@ -24,7 +24,7 @@ app.use(logger);
 {% if params.mappingDirection === '0' -%}
 adapter(app);
 {%- elif params.mappingDirection === '1' -%}
-app.use(adapter);
+app.useOutbound(adapter);
 {%- endif %}
 
 // Channels
