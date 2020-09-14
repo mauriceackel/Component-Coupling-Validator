@@ -97,14 +97,20 @@ export async function getMessageSchema(api: IAsyncApi, searchOperation: IAsyncAp
       result.parameters = parameters;
     }
 
-    const headers = removeTypes(flattenSchema(message.headers().json()));
-    if (Object.keys(headers).length > 0) {
-      result.headers = headers;
+    const headerJSON = message.headers()?.json();
+    if(headerJSON !== undefined) {
+      const headers = removeTypes(flattenSchema(headerJSON));
+      if (Object.keys(headers).length > 0) {
+        result.headers = headers;
+      }
     }
 
-    const payload = removeTypes(flattenSchema(message.payload().json()));
-    if (Object.keys(payload).length > 0) {
-      result.payload = payload;
+    const payloadJSON = message.payload()?.json();
+    if(payloadJSON !== undefined) {
+      const payload = removeTypes(flattenSchema(payloadJSON));
+      if (Object.keys(payload).length > 0) {
+        result.payload = payload;
+      }
     }
 
     return result;

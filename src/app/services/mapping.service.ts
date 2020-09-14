@@ -20,6 +20,7 @@ type ParsedOpenApiMapping = Omit<IOpenApiMapping, "requestMapping" | "responseMa
 type AsyncApiTree = { node: ParsedAsyncApiMapping, children?: AsyncApiTree[] };
 type ParsedAsyncApiMapping = Omit<IAsyncApiMapping, "messageMappings"> & { messageMappings: { [targetId: string]: { [key: string]: string } }, messageMappingsInputKeys: { [targetId: string]: { [key: string]: string[] } } }
 const operatorsRegex = /(=|!|\+|-|\*|\/|>|<|\sand\s|\sor\s|\sin\s|&|%)(?!((\w|-)*?"$)|((\w|-)*?"\."))/g;
+const escapeRegex = /(^\d.*)|(-)/g;
 
 @Injectable({
   providedIn: 'root'
@@ -821,8 +822,9 @@ export function stringifyedToJsonata(obj: string) {
   return obj.replace(keyValueRegex, '"$1":$2').replace(/\\\"/g, '"');
 }
 
+
 export function buildJSONataKey(keyChain: KeyChain): string {
-  const needsEscaping = keyChain.some(k => k.includes('-'));
+  const needsEscaping = keyChain.some(k => escapeRegex.test(k));
   if (!needsEscaping) {
     return keyChain.join('.');
   }
