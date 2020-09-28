@@ -81,6 +81,7 @@ async function createJavaScriptAdapter(
   targetOperations: { apiId: string; operationId: string; topic: string; server: string }[]
 ) {
   const targets: { id: string, fullId: string, topic: string, mapping: string }[] = [];
+  const generatedTargets: string[] = [];
 
   for (const target of targetOperations) {
     const generator = new AsyncApiGenerator('./asyncapi-generator/target-template', `${filePath}/targets/${target.apiId}`, {
@@ -97,7 +98,10 @@ async function createJavaScriptAdapter(
       topic: target.topic
     });
 
-    await await generator.generateFromFile(targetPath);
+    if(!generatedTargets.includes(target.apiId)) {
+      await generator.generateFromFile(targetPath);
+      generatedTargets.push(target.apiId);
+    }
   }
 
   const generator = new AsyncApiGenerator('./asyncapi-generator/source-template', `${filePath}/source`, {
