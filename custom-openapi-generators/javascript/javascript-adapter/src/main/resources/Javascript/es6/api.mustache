@@ -1,13 +1,13 @@
 {{>licenseInfo}}
 
 {{=< >=}}
-import ApiClient from "../ApiClient";
-<#imports>import <&import> from '../<#modelPackage><&modelPackage>/</modelPackage><import>';
+const ApiClient = require('../ApiClient');
+<#imports>const <&import> = require('../<#modelPackage><&modelPackage>/</modelPackage><import>');
 </imports>
 <#containsOperation>
-import * as jsonata from 'jsonata';
+const jsonata = require('jsonata');
 <#targets>
-import { <targetApiName> as <targetFullId>TargetApi, ApiClient as <targetFullId>ApiClient } from '<targetApiPath>/src/index';
+const { <targetApiName>: <targetFullId>TargetApi, ApiClient: <targetFullId>ApiClient } = require('<targetApiPath>/src/index');
 </targets>
 </containsOperation>
 
@@ -16,7 +16,7 @@ import { <targetApiName> as <targetFullId>TargetApi, ApiClient as <targetFullId>
 * @module <#invokerPackage><&invokerPackage>/</invokerPackage><#apiPackage><&apiPackage>/</apiPackage><classname>
 * @version <&projectVersion>
 */</emitJSDoc>
-export default class <&classname> {
+module.exports = class <&classname> {
 
     <#emitJSDoc>/**
     * Constructs a new <&classname>. <#description>

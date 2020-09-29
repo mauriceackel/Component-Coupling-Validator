@@ -1,7 +1,7 @@
 {{>licenseInfo}}
 
-import superagent from "superagent";
-import querystring from "querystring";
+const superagent = require('superagent');
+const querystring = require('querystring');
 
 {{#emitJSDoc}}/**
 * @module {{#invokerPackage}}{{invokerPackage}}/{{/invokerPackage}}ApiClient
@@ -724,4 +724,4 @@ ApiClient.CollectionFormatEnum = {
 * @type {module:{{#invokerPackage}}{{invokerPackage}}/{{/invokerPackage}}ApiClient}
 */{{/emitJSDoc}}
 ApiClient.instance = new ApiClient();
-export default ApiClient;
+module.exports = ApiClient;
