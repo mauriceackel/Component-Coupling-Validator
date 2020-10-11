@@ -7,7 +7,7 @@ import { merge, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { IOpenApi } from '~/app/models/openapi.model';
 import { IOpenApiInterface } from '~/app/models/openapi-interface.model';
-import { IMappingPair, MappingType } from '~/app/models/mapping.model';
+import { IMapping, IMappingPair, MappingType } from '~/app/models/mapping.model';
 import { ApiService } from '~/app/services/api.service';
 import { MappingService } from '~/app/services/mapping.service';
 import { TaskService } from '~/app/services/task.service';
@@ -25,11 +25,11 @@ import { TaskReportService } from '~/app/services/task-report.service';
 const adapterServiceBase = environment.adapterServiceBase;
 
 @Component({
-  selector: 'app-openapi-transformation',
-  templateUrl: './transformation.component.html',
-  styleUrls: ['./transformation.component.scss']
+  selector: 'app-openapi-manual',
+  templateUrl: './manual.component.html',
+  styleUrls: ['./manual.component.scss']
 })
-export class TransformationComponent implements OnInit, OnDestroy {
+export class ManualComponent implements OnInit, OnDestroy {
 
   public apis: Array<IOpenApi>;
 
@@ -53,11 +53,6 @@ export class TransformationComponent implements OnInit, OnDestroy {
   public targetRequestBodies: any;
   public targetResponseBodies: any;
 
-  public requestMappingPairs: Array<IMappingPair>;
-  public responseMappingPairs: Array<IMappingPair>;
-
-  public mappingError: OpenApiValidationError;
-
   private subscriptions: Array<Subscription>;
 
   @ViewChild(MatExpansionPanel) testRequest: MatExpansionPanel;
@@ -67,19 +62,15 @@ export class TransformationComponent implements OnInit, OnDestroy {
     private apiService: ApiService,
     private mappingService: MappingService,
     private adapterService: AdapterService,
-    private validationService: ValidationService,
     private dialog: MatDialog,
     private taskService: TaskService,
     private taskReportService: TaskReportService,
+    private activatedRoute: ActivatedRoute,
     private router: Router,
-    private overlay: Overlay,
-    private activatedRoute: ActivatedRoute
+    private overlay: Overlay
   ) { }
 
   public async ngOnInit() {
-    this.requestMappingPairs = new Array<IMappingPair>();
-    this.responseMappingPairs = new Array<IMappingPair>();
-
     this.mappingSource = undefined;
     this.mappingTargets = undefined;
 
@@ -91,12 +82,9 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.targetRequestBodies = undefined;
     this.targetResponseBodies = undefined;
 
-    this.mappingError = undefined;
     this.subscriptions = new Array<Subscription>();
 
     this.apis = await this.apiService.getOpenApis();
-
-    this.subscriptions.push(this.inputForm.valueChanges.subscribe(() => this.initializeMapping()));
 
     const sourceChanges = merge(this.inputForm.get('mS').valueChanges, this.inputForm.get('mSO').valueChanges, this.inputForm.get('mSR').valueChanges).pipe(debounceTime(0));
     this.subscriptions.push(sourceChanges.subscribe(async () => {
@@ -255,42 +243,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
   }
 
   stopSpinner() {
-    console.log("Now",this.spinnerRef)
     this.spinnerRef.detach();
-  }
-
-  private async initializeMapping() {
-    if (!this.inputForm.valid) return;
-
-    this.showSpinner();
-
-    const { request, response } = await this.mappingService.buildOpenApiMappingPairs(this.parseSource(), this.parseTargets());
-
-    this.requestMappingPairs.splice(0);
-    this.requestMappingPairs.push(...request);
-
-    this.responseMappingPairs.splice(0);
-    this.responseMappingPairs.push(...response);
-
-    this.stopSpinner();
-  }
-
-  mapSame(request: boolean) {
-    if (request) {
-      const mappingPairs = this.mappingService.buildSameMappingPairs(this.sourceRequestBody, this.targetRequestBodies);
-      mappingPairs.forEach(p => {
-        if (!this.requestMappingPairs.find(e => e.required.join('.') === p.required.join('.'))) {
-          this.requestMappingPairs.push(p);
-        }
-      })
-    } else {
-      const mappingPairs = this.mappingService.buildSameMappingPairs(this.targetResponseBodies, this.sourceResponseBody);
-      mappingPairs.forEach(p => {
-        if (!this.responseMappingPairs.find(e => e.required.join('.') === p.required.join('.'))) {
-          this.responseMappingPairs.push(p);
-        }
-      })
-    }
   }
 
   public reset() {
@@ -310,19 +263,10 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
   public async buildAdapter() {
     this.showSpinner();
-
     try {
-      if ([...this.requestMappingPairs, ...this.responseMappingPairs].some(mp => !mp.mappingCode)) {
-        throw new OpenApiValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")
-      }
-
       const source = this.parseSource();
       const targets = this.parseTargets();
-      const mapping = this.mappingService.buildOpenApiMapping(source, targets, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
-
-      await this.validationService.validateOpenApiMappingComplete(source, targets, mapping);
-
-      this.mappingError = undefined;
+      const mapping = this.mappingService.buildOpenApiMapping(source, targets, [], [], MappingType.MANUAL);
 
       await this.taskReportService.updateTaskReport({
         id: this.taskService.ActiveTaskReportId,
@@ -336,10 +280,6 @@ export class TransformationComponent implements OnInit, OnDestroy {
       await this.showTokenDialog(token);
       window.open(`${adapterServiceBase}:${port}`, "_blank");
     } catch (err) {
-      if (err instanceof OpenApiValidationError) {
-        this.mappingError = err;
-        return;
-      }
       throw err;
     } finally {
       this.stopSpinner();
@@ -356,10 +296,6 @@ export class TransformationComponent implements OnInit, OnDestroy {
       }
 
     } catch (err) {
-      if (err instanceof OpenApiValidationError) {
-        this.mappingError = err;
-        return;
-      }
       this.showErrorDialog();
       throw err;
     }

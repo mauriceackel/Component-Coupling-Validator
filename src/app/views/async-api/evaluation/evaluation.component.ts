@@ -28,11 +28,25 @@ export class EvaluationComponent implements OnInit {
     this.taskService.startTask(task);
 
     switch (task.type) {
-      case TaskType.MANUAL: this.router.navigate(['../transformation'], { relativeTo: this.route, queryParams: { sourceId: task.sourceInterface, targetId: task.targetInterface } }); break;
+      case TaskType.MANUAL: this.router.navigate(['../manual'], { relativeTo: this.route, queryParams: this.buildParams(task) }); break;
       case TaskType.TOOL_ONLY:
-      case TaskType.TOOL_FULL: this.router.navigate(['../transformation'], { relativeTo: this.route, queryParams: { selectedId: task.sourceInterface } }); break;
+      case TaskType.TOOL_FULL: this.router.navigate(['../transformation'], { relativeTo: this.route, queryParams: this.buildParams(task) }); break;
       default: throw new Error("Unknown mapping type");
     }
+  }
+
+  private buildParams(task: ITask) {
+    let result: { source?: string, targets?: string } = {};
+
+    if(task.sourceInterface) {
+      result.source = `${task.sourceInterface.apiId}$${task.sourceInterface.operationId}$${task.sourceInterface.responseId}`;
+    }
+
+    if(task.targetInterfaces) {
+      result.targets = task.targetInterfaces.map(t => `${t.apiId}$${t.operationId}$${t.responseId}`).join(',');
+    }
+
+    return result;
   }
 
   public abortTask() {

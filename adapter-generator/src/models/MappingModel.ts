@@ -10,7 +10,8 @@ export interface IMapping {
 export enum MappingType {
   TRANSFORMATION,
   AUTO,
-  REVERSE
+  REVERSE,
+  MANUAL
 }
 
 export enum MappingDirection {

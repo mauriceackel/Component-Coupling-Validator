@@ -15,6 +15,8 @@ import { MappingService, buildJSONataKey } from '~/app/services/mapping.service'
 })
 export class MappingZoneComponent implements OnInit, OnChanges {
 
+  @Input("disabled") public disabled: boolean;
+
   @Input("isRequest") public isRequest: boolean;
 
   @Input("leftHeading") public leftHeading: string;

@@ -1,9 +1,9 @@
 <ng-container>
   <div class="row border-bottom">
-    <div class="col-3 border-right d-flex justify-content-center">
+    <div class="col border-right d-flex justify-content-center">
       <h3 class="font-weight-bold">{{leftHeading}}</h3>
     </div>
-    <div class="col-6">
+    <div *ngIf="!disabled" class="col-6">
       <div class="row">
         <div class="col">
           <button mat-stroked-button color="primary" class="btn-narrow" (click)="mapSame.emit()">Map
@@ -19,19 +19,19 @@
         </div>
       </div>
     </div>
-    <div class="col-3 border-left d-flex justify-content-center">
+    <div class="col border-left d-flex justify-content-center">
       <h3 class="font-weight-bold">{{rightHeading}}</h3>
     </div>
   </div>
   <div class="row">
-    <div class="col-3 border-right">
+    <div class="col border-right">
       <mat-tree [dataSource]="leftDataSource" [treeControl]="leftTreeControl" class="mat-tree">
         <!-- Leaf nodes -->
         <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
           <li class="mat-tree-node">
             <mat-icon></mat-icon>
             <button mat-button class="btn-no-overflow" [ngClass]="{'mat-accent': selectedLeft.includes(node)}"
-              (click)="selectLeft(node)" [disabled]="!isRequest && isMapped(node)">{{node.name}}</button>
+              (click)="selectLeft(node)" [disabled]="disabled || !isRequest && isMapped(node)">{{node.name}}</button>
           </li>
         </mat-tree-node>
         <!-- Expandable nodes -->
@@ -50,7 +50,7 @@
         </mat-nested-tree-node>
       </mat-tree>
     </div>
-    <div class="col-6">
+    <div *ngIf="!disabled" class="col-6">
       <div class="mapping-container">
         <div (click)="openEditor(pair)" class="d-flex flex-wrap cursor-pointer mapping-pair m-2"
           [ngClass]="{'invalid': !pair.mappingCode}" *ngFor="let pair of mappingPairs">
@@ -74,14 +74,14 @@
         </div>
       </div>
     </div>
-    <div class="col-3 border-left">
+    <div class="col border-left">
       <mat-tree [dataSource]="rightDataSource" [treeControl]="rightTreeControl" class="mat-tree">
         <!-- Leaf nodes -->
         <mat-tree-node *matTreeNodeDef="let node" matTreeNodeToggle>
           <li class="mat-tree-node">
             <mat-icon></mat-icon>
             <button mat-button class="btn-no-overflow" [ngClass]="{'mat-accent': selectedRight.includes(node)}"
-              (click)="selectRight(node)" [disabled]="isRequest && isMapped(node)">{{node.name}}</button>
+              (click)="selectRight(node)" [disabled]="disabled || isRequest && isMapped(node)">{{node.name}}</button>
           </li>
         </mat-tree-node>
         <!-- Expandable nodes -->

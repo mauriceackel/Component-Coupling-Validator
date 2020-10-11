@@ -9,6 +9,7 @@ import { DescribeModule } from './describe/describe.module';
 import { TransformationModule } from './transformation/transformation.module';
 import { MatIconModule } from '@angular/material/icon';
 import { EvaluationModule } from './evaluation/evaluation.module';
+import { ManualModule } from './manual/manual.module';
 
 @NgModule({
   declarations: [
@@ -20,6 +21,7 @@ import { EvaluationModule } from './evaluation/evaluation.module';
     MatToolbarModule,
     RouterModule,
     EvaluationModule,
+    ManualModule,
     DescribeModule,
     TransformationModule,
     MatIconModule

@@ -3,8 +3,16 @@ export interface ITask {
   id: string
   name: string
   description: string
-  sourceInterface: string
-  targetInterface: string
+  sourceInterface?: {
+    apiId: string,
+    operationId: string,
+    responseId: string
+  }
+  targetInterfaces?: {
+    apiId: string,
+    operationId: string,
+    responseId: string
+  }[],
   type: TaskType
   goal: any
 }

@@ -13,8 +13,6 @@ import { AuthenticationService } from '~/app/services/authentication.service';
 
         <div class="col-6 d-flex justify-content-center">
           <button mat-button class="mx-1" [routerLink]="['home']" routerLinkActive="link-active">Explanation</button>
-          <button mat-button class="mx-1" [routerLink]="['transformation']" routerLinkActive="link-active">Transformation</button>
-          <button mat-button class="mx-1" [routerLink]="['describe']" routerLinkActive="link-active">Add API</button>
         </div>
 
         <div class="col-3">

@@ -1,6 +1,6 @@
 import { logger, sleep } from "../Service";
 import { AdapterType } from "../models/AdapterModel";
-import { IOpenApiMapping } from "../models/MappingModel";
+import { IOpenApiMapping, MappingType } from "../models/MappingModel";
 import { exec } from "child_process";
 import { STORAGE_PATH } from "../config/Config";
 import { v4 as uuidv4 } from 'uuid';
@@ -74,6 +74,12 @@ async function createJavaScriptAdapter(
   targetOperations: { apiId: string; operationId: string; responseId: string; }[],
   taskReportId: string
 ) {
+  console.log(mapping.type);
+  if (mapping.type === MappingType.MANUAL) {
+    console.log("Bye")
+    return createManualJSAdapter(filePath, mapping, sourceOperation, targetOperations, taskReportId);
+  }
+
   const responseMapping = Buffer.from(escapeQuote(stringifyedToJsonata(mapping.responseMapping))).toString('base64');
   const requestMapping = Buffer.from(escapeQuote(stringifyedToJsonata(mapping.requestMapping))).toString('base64');
 
@@ -148,6 +154,34 @@ function parseJavaScriptTarget(filePath: string): { targetApiName: string, targe
 }
 
 
+async function createManualJSAdapter(
+  filePath: string, mapping: IOpenApiMapping,
+  sourceOperation: { apiId: string; operationId: string; responseId: string; },
+  targetOperations: { apiId: string; operationId: string; responseId: string; }[],
+  taskReportId: string
+) {
+  await generateOpenApiInterface('javascript', `${filePath}/source`);
+
+  for (const target of targetOperations) {
+    const targetPath = `${filePath}/targets/${target.apiId}`;
+    await generateOpenApiInterface('javascript', targetPath);
+  }
+
+  const install = mustache.render(fs.readFileSync(path.resolve(__dirname, '../templates/open-api/install.mustache')).toString(), {
+    targets: targetOperations.map(t => ({ id: t.apiId }))
+  });
+  fs.writeFileSync(`${filePath}/install.sh`, install);
+
+  const test = mustache.render(fs.readFileSync(path.resolve(__dirname, '../templates/open-api/test.mustache')).toString(), {
+    taskReportId
+  });
+  fs.writeFileSync(`${filePath}/test.js`, test);
+
+  const packag = mustache.render(fs.readFileSync(path.resolve(__dirname, '../templates/open-api/package.mustache')).toString(), {
+  });
+  fs.writeFileSync(`${filePath}/package.json`, packag);
+}
+
 async function generateOpenApiInterface(generator: string, path: string, options?: string) {
   const additionalOptions = options ? ` -p=${options}` : '';
   const executable = "java -cp openapi-generator/javascript-adapter-openapi-generator-1.0.0.jar:openapi-generator/javascript-target-openapi-generator-1.0.0.jar:openapi-generator/openapi-generator-cli.jar org.openapitools.codegen.OpenAPIGenerator";
@@ -160,3 +194,4 @@ async function generateOpenApiInterface(generator: string, path: string, options
     child.on('error', reject);
   })
 }
+
