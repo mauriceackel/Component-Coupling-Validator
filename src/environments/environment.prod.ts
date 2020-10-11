@@ -1,6 +1,11 @@
+const adapterServiceBase = "iot.informatik.uni-mannheim.de";
+const adapterServicePort = "8200";
+
 export const environment = {
   production: true,
-  adapterServiceBaseUrl: "https://iot.informatik.uni-mannheim.de:8200",
+  adapterServiceBase,
+  adapterServicePort,
+  adapterServiceBaseUrl: `https://${adapterServiceBase}:${adapterServicePort}`,
   firebase: {
     apiKey: "AIzaSyAzYN7Id-HtrJxZt6SNGUwDJ11gLDOlFDg",
     authDomain: "integrateit-41c60.firebaseapp.com",

@@ -1,0 +1,64 @@
+const source = require('./source/src/index');
+const firebase = require('firebase');
+const { diff } = require('deep-object-diff');
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAzYN7Id-HtrJxZt6SNGUwDJ11gLDOlFDg",
+  authDomain: "integrateit-41c60.firebaseapp.com",
+  databaseURL: "https://integrateit-41c60.firebaseio.com",
+  projectId: "integrateit-41c60",
+  storageBucket: "integrateit-41c60.appspot.com",
+  messagingSenderId: "287628349300",
+  appId: "1:287628349300:web:70bba41d86cba288446621"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+async function test(response) {
+  //TODO: Fill in your username and password here
+  await firebase.auth().signInWithEmailAndPassword("your.email@example.com", "YOUR_PASSWORD");
+
+  console.log('Final Server Response:\n', response);
+
+  const taskReportRef = firebase.firestore().collection('task-reports').doc('{{taskReportId}}');
+
+  const taskId = await taskReportRef.get().then(snap => snap.data().task);
+  const goal = await firebase.firestore().collection('tasks').doc(taskId).get().then(snap => snap.data().goal);
+
+  const dataDiff = diff(response, goal);
+
+  await taskReportRef.update({
+    testResults: firebase.firestore.FieldValue.arrayUnion({
+      time: Date.now(),
+      result: response,
+      diff: dataDiff
+    })
+  });
+
+  if(Object.keys(dataDiff).length === 0) {
+    console.info('You successfully finished the task. NOW PLEASE RETURN TO THE TOOL WEBSITE AND CLICK ON THE "FINISH TASK" BUTTON');
+  } else {
+    console.warn('You have errors in your result');
+  }
+}
+
+async function main() {
+  const ApiClient = source.ApiClient.instance;
+  const ApiInterface = new source.DefaultApi(ApiClient);
+
+  const request = {
+    q: 'test'
+  };
+  try {
+    //TODO: Call the right function
+    const response = await ApiInterface.CHANGE_THIS_METHOD_NAME(request);
+    await test(response);
+    //TODO: Send back to server
+  } catch (err) {
+    console.log(err);
+    //TODO: Log error to DB
+  }
+}
+
+main();

@@ -3,4 +3,11 @@ export interface ITaskReport {
   task: string
   createdBy: string
   time: number
+  fileId?: string
+  mapping?: {
+    requestMapping: string,
+    responseMapping: string
+  } | {
+    messageMappings: { [key: string]: string}
+  }
 }

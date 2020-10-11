@@ -8,10 +8,13 @@ import fs from 'fs';
 import * as ApiService from './ApiService';
 import { IOpenApi } from "../models/ApiModel";
 import { camelcase } from "../utils/camelcase";
-import Zip from "adm-zip";
+import mustache from 'mustache';
+import path from 'path';
+/// <reference lib="dom" />
+import * as firebase from 'firebase';
 import { escapeQuote, stringifyedToJsonata } from "../utils/sanitize";
 
-export async function createAdapter(adapterType: AdapterType, mapping: IOpenApiMapping): Promise<string> {
+export async function createAdapter(adapterType: AdapterType, mapping: IOpenApiMapping, taskReportId: string): Promise<string> {
   logger.info(`Trying to create adapter for type: ${adapterType}`);
 
   const adapterTypeKeys: string[] = Object.keys(AdapterType)
@@ -55,22 +58,21 @@ export async function createAdapter(adapterType: AdapterType, mapping: IOpenApiM
 
   logger.info(`Select adapter generator`);
   switch (adapterType) {
-    case AdapterType.JAVASCRIPT: await createJavaScriptAdapter(filePath, mapping, sourceOperation, targetOperations); break;
+    case AdapterType.JAVASCRIPT: await createJavaScriptAdapter(filePath, mapping, sourceOperation, targetOperations, taskReportId); break;
     default: throw new Error("Unkown adapter type");
   }
 
-  //Create zip file
-  var zip = new Zip();
-  zip.addLocalFolder(filePath);
-  zip.writeZip(`${filePath}.zip`);
-
+  firebase.firestore().collection('task-reports').doc(taskReportId).update({
+    fileId: fileId
+  });
   return fileId;
 }
 
 async function createJavaScriptAdapter(
   filePath: string, mapping: IOpenApiMapping,
   sourceOperation: { apiId: string; operationId: string; responseId: string; },
-  targetOperations: { apiId: string; operationId: string; responseId: string; }[]
+  targetOperations: { apiId: string; operationId: string; responseId: string; }[],
+  taskReportId: string
 ) {
   const responseMapping = Buffer.from(escapeQuote(stringifyedToJsonata(mapping.responseMapping))).toString('base64');
   const requestMapping = Buffer.from(escapeQuote(stringifyedToJsonata(mapping.requestMapping))).toString('base64');
@@ -83,7 +85,7 @@ async function createJavaScriptAdapter(
   additionalParameters.push(`usePromises=true`);
   additionalParameters.push(`projectVersion=0.0.1`);
 
-  const targetInfos: string[] = [];
+  const targetInfos: { [key: string]: string | boolean }[] = [];
   for (const target of targetOperations) {
     const targetPath = `${filePath}/targets/${target.apiId}`;
 
@@ -102,15 +104,29 @@ async function createJavaScriptAdapter(
     if (targetBodyName) targetInfo.targetBodyName = targetBodyName;
     if (targetHasOptional) targetInfo.targetHasOptional = true;
 
-    targetInfos.push(Buffer.from(JSON.stringify(targetInfo)).toString('base64'));
+    targetInfos.push(targetInfo);
   }
-  additionalParameters.push(`targets=${targetInfos.join('.')}`);
+  additionalParameters.push(`targets=${targetInfos.map(t => Buffer.from(JSON.stringify(t)).toString('base64')).join('.')}`);
 
   await generateOpenApiInterface(
     'javascript-adapter',
     `${filePath}/source`,
     additionalParameters.join(',')
   );
+
+  const install = mustache.render(fs.readFileSync(path.resolve(__dirname, '../templates/open-api/install.mustache')).toString(), {
+    targets: targetInfos.map(t => ({ id: t.targetApiId }))
+  });
+  fs.writeFileSync(`${filePath}/install.sh`, install);
+
+  const test = mustache.render(fs.readFileSync(path.resolve(__dirname, '../templates/open-api/test.mustache')).toString(), {
+    taskReportId
+  });
+  fs.writeFileSync(`${filePath}/test.js`, test);
+
+  const packag = mustache.render(fs.readFileSync(path.resolve(__dirname, '../templates/open-api/package.mustache')).toString(), {
+  });
+  fs.writeFileSync(`${filePath}/package.json`, packag);
 }
 
 function parseJavaScriptTarget(filePath: string): { targetApiName: string, targetHasBody: boolean, targetBodyName: string, targetBodyRequired: boolean, targetOptions: Array<string>, targetHasOptional: boolean } {

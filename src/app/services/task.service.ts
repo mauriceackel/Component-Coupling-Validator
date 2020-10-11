@@ -5,6 +5,11 @@ import { removeUndefined } from '../utils/remove-undefined';
 import { ITaskReport } from '../models/task-report.model';
 import { AuthenticationService } from './authentication.service';
 import { TaskReportService } from './task-report.service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '~/environments/environment';
+
+const adapterServiceBaseUrl = environment.adapterServiceBaseUrl;
+const dockerControllerUrl = `${adapterServiceBaseUrl}/docker`;
 
 @Injectable({
   providedIn: 'root'
@@ -23,10 +28,15 @@ export class TaskService {
     return this._activeTask;
   }
 
+  private _activeTaskReportId: string;
+  public get ActiveTaskReportId(): string {
+    return this._activeTaskReportId;
+  }
+
   private elapsedTime: number;
   private taskStartTimestamp: number;
 
-  constructor(private firestore: AngularFirestore, private authService: AuthenticationService, private taskReportService: TaskReportService) {
+  constructor(private firestore: AngularFirestore, private authService: AuthenticationService, private taskReportService: TaskReportService, private httpClient: HttpClient) {
     this.taskColl = firestore.collection('tasks');
   }
 
@@ -67,13 +77,21 @@ export class TaskService {
     return this.taskColl.doc(task.id).update(this.serializeTask(task));
   }
 
-  public startTask(task: ITask) {
+  public async startTask(task: ITask) {
     if(!this._taskRunning) {
       //Start a new task
       this._taskRunning = true;
       this._activeTask = task;
       this.elapsedTime = 0;
       this.taskStartTimestamp = Date.now();
+
+      let taskReport: ITaskReport = {
+        id: undefined,
+        createdBy: this.authService.User.uid,
+        task: this._activeTask.id,
+        time: -1
+      }
+      this._activeTaskReportId = await this.taskReportService.createTaskReport(taskReport);
     } else {
       //Resume a task
       this.taskStartTimestamp = Date.now();
@@ -88,28 +106,20 @@ export class TaskService {
 
   public abortTask() {
     if(this._taskRunning) {
-      let taskReport: ITaskReport = {
-        id: undefined,
-        createdBy: this.authService.User.uid,
-        task: this._activeTask.id,
-        time: -1
-      }
-      this.taskReportService.createTaskReport(taskReport);
-
       this._activeTask = undefined;
       this._taskRunning = false;
+      this.httpClient.get(`${dockerControllerUrl}/${this.ActiveTaskReportId}`).toPromise();
     }
   }
 
   public finishTask() {
     if(this._taskRunning) {
-      let taskReport: ITaskReport = {
-        id: undefined,
-        createdBy: this.authService.User.uid,
-        task: this._activeTask.id,
+      let taskReport: Partial<ITaskReport> = {
+        id: this._activeTaskReportId,
         time: this.elapsedTime + (Date.now() - this.taskStartTimestamp)
       }
-      this.taskReportService.createTaskReport(taskReport);
+      this.taskReportService.updateTaskReport(taskReport);
+      this.httpClient.get(`${dockerControllerUrl}/${this.ActiveTaskReportId}`).toPromise();
 
       this._activeTask = undefined;
       this._taskRunning = false;

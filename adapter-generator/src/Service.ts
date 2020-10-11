@@ -3,7 +3,9 @@ import bodyParser from 'body-parser';
 import OpenApiAdapterController from './controller/OpenApiAdapterController';
 import AsyncApiAdapterController from './controller/AsyncApiAdapterController';
 import FileController from './controller/FileController';
+import DockerController from './controller/DockerController';
 import * as Config from './config/Config';
+import * as DockerService from './services/DockerService';
 import https from 'https';
 /// <reference lib="dom" />
 import * as firebase from 'firebase';
@@ -88,6 +90,8 @@ export class Service {
           });
           await httpPromise;
         }
+
+        await DockerService.stopAll();
 
         logger.info('Shutting down gracefully');
         process.exit(0);
@@ -179,6 +183,7 @@ export class Service {
       //Register routes with no or only partial authentication
       this.express.use('/open-api/create-adapter', OpenApiAdapterController);
       this.express.use('/async-api/create-adapter', AsyncApiAdapterController);
+      this.express.use('/docker', DockerController);
       this.express.use('/download', FileController);
 
       //If no validation checks failed before, give the OK to the API Gateway

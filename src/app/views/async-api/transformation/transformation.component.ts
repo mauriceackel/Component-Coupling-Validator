@@ -19,6 +19,10 @@ import { AdapterService, AdapterType } from '~/app/services/adapter.service';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ProgressIndicatorComponent } from '~/app/components/progress-indicator/progress-indicator.component';
+import { environment } from '~/environments/environment';
+import { TaskReportService } from '~/app/services/task-report.service';
+
+const adapterServiceBase = environment.adapterServiceBase;
 
 @Component({
   selector: 'app-asyncapi-transformation',
@@ -63,6 +67,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
     private validationService: ValidationService,
     private dialog: MatDialog,
     private taskService: TaskService,
+    private taskReportService: TaskReportService,
     private router: Router,
     private overlay: Overlay
   ) { }
@@ -272,9 +277,16 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
       this.mappingError = undefined;
 
-      const downloadLink = await this.adapterService.createAsyncApiAdapter(mapping, AdapterType.JAVASCRIPT);
+      await this.taskReportService.updateTaskReport({
+        id: this.taskService.ActiveTaskReportId,
+        mapping: {
+          messageMappings: mapping.messageMappings,
+        }
+      });
 
-      window.open(downloadLink, "_blank");
+      const { port, token } = await this.adapterService.createAsyncApiAdapter(mapping, AdapterType.JAVASCRIPT, this.taskService.ActiveTaskReportId);
+      await this.showTokenDialog(token);
+      window.open(`${adapterServiceBase}:${port}`, "_blank");
     } catch (err) {
       if (err instanceof AsyncApiValidationError) {
         this.mappingError = err;
@@ -286,21 +298,6 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
   public async finishMapping() {
     try {
-      if (this.mappingPairs.some(mp => !mp.mappingCode)) {
-        throw new OpenApiValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")
-      }
-
-      const direction = this.inputForm.get('publish').value ? MappingDirection.OUTPUT : MappingDirection.INPUT;
-
-      const source = this.parseSource();
-      const targets = this.parseTargets();
-      const mapping = this.mappingService.buildAsyncApiMapping(source, targets, this.mappingPairs, direction, MappingType.TRANSFORMATION);
-
-      await this.validationService.validateAsyncApiMappingComplete(source, targets, mapping, direction);
-
-      this.mappingError = undefined;
-      await this.mappingService.createAsyncApiMapping(mapping);
-
       if (this.taskService.TaskRunning) {
         this.taskService.finishTask();
         this.showTaskSuccessDialog();
@@ -350,6 +347,21 @@ export class TransformationComponent implements OnInit, OnDestroy {
     dialogRef.afterClosed().subscribe(() => {
       this.reset();
     });
+  }
+
+  private showTokenDialog(token: string) {
+    const dialogRef: MatDialogRef<GenericDialog, void> = this.dialog.open(GenericDialog, {
+      position: {
+        top: "5%"
+      },
+      data: {
+        title: "Continue Editing",
+        content: `You will be taken to another service now. Copy the following token to log in:\n\n${token}`,
+        buttons: [ButtonType.OK]
+      }
+    });
+
+    return dialogRef.afterClosed().toPromise();
   }
 
   private showTaskSuccessDialog() {

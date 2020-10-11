@@ -1,18 +1,18 @@
 import { logger, sleep } from "../Service";
 import { AdapterType } from "../models/AdapterModel";
 import { IAsyncApiMapping } from "../models/MappingModel";
-import { exec } from "child_process";
 import { STORAGE_PATH } from "../config/Config";
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import * as ApiService from './ApiService';
-import { IAsyncApi } from "../models/ApiModel";
-import { camelcase } from "../utils/camelcase";
-import Zip from "adm-zip";
+import mustache from 'mustache';
+import path from 'path';
+/// <reference lib="dom" />
+import * as firebase from 'firebase';
 import { escapeQuote, stringifyedToJsonata } from "../utils/sanitize";
 const AsyncApiGenerator = require('@asyncapi/generator');
 
-export async function createAdapter(adapterType: AdapterType, mapping: IAsyncApiMapping): Promise<string> {
+export async function createAdapter(adapterType: AdapterType, mapping: IAsyncApiMapping, taskReportId: string): Promise<string> {
   logger.info(`Trying to create adapter for type: ${adapterType}`);
 
   const adapterTypeKeys: string[] = Object.keys(AdapterType)
@@ -63,22 +63,21 @@ export async function createAdapter(adapterType: AdapterType, mapping: IAsyncApi
 
   logger.info(`Select adapter generator`);
   switch (adapterType) {
-    case AdapterType.JAVASCRIPT: await createJavaScriptAdapter(filePath, mapping, sourceOperation, targetOperations); break;
+    case AdapterType.JAVASCRIPT: await createJavaScriptAdapter(filePath, mapping, sourceOperation, targetOperations, taskReportId); break;
     default: throw new Error("Unkown adapter type");
   }
 
-  //Create zip file
-  var zip = new Zip();
-  zip.addLocalFolder(filePath);
-  zip.writeZip(`${filePath}.zip`);
-
+  firebase.firestore().collection('task-reports').doc(taskReportId).update({
+    fileId: fileId
+  });
   return fileId;
 }
 
 async function createJavaScriptAdapter(
   filePath: string, mapping: IAsyncApiMapping,
   sourceOperation: { apiId: string; operationId: string; topic: string; server: string },
-  targetOperations: { apiId: string; operationId: string; topic: string; server: string }[]
+  targetOperations: { apiId: string; operationId: string; topic: string; server: string }[],
+  taskReportId: string
 ) {
   const targets: { id: string, fullId: string, topic: string, mapping: string }[] = [];
   const generatedTargets: string[] = [];
@@ -98,7 +97,7 @@ async function createJavaScriptAdapter(
       topic: target.topic
     });
 
-    if(!generatedTargets.includes(target.apiId)) {
+    if (!generatedTargets.includes(target.apiId)) {
       await generator.generateFromFile(targetPath);
       generatedTargets.push(target.apiId);
     }
@@ -114,4 +113,18 @@ async function createJavaScriptAdapter(
     }
   });
   await generator.generateFromFile(`${filePath}/source/apiSpec.json`);
+
+  const install = mustache.render(fs.readFileSync(path.resolve(__dirname, '../templates/async-api/install.mustache')).toString(), {
+    targets
+  });
+  fs.writeFileSync(`${filePath}/install.sh`, install);
+
+  const test = mustache.render(fs.readFileSync(path.resolve(__dirname, '../templates/async-api/test.mustache')).toString(), {
+    taskReportId
+  });
+  fs.writeFileSync(`${filePath}/test.js`, test);
+
+  const packag = mustache.render(fs.readFileSync(path.resolve(__dirname, '../templates/async-api/package.mustache')).toString(), {
+  });
+  fs.writeFileSync(`${filePath}/package.json`, packag);
 }

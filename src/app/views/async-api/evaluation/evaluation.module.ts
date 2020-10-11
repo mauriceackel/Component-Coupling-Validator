@@ -3,14 +3,14 @@ import { NgModule } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
-import { HomeComponent } from './home.component';
+import { EvaluationComponent } from './evaluation.component';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 
 @NgModule({
   declarations: [
-    HomeComponent
+    EvaluationComponent
   ],
   imports: [
     CommonModule,
@@ -22,7 +22,7 @@ import { MatListModule } from '@angular/material/list';
     MatListModule
   ],
   exports: [
-    HomeComponent
+    EvaluationComponent
   ]
 })
-export class HomeModule { }
+export class EvaluationModule { }

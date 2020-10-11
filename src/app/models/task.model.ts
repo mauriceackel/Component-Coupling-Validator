@@ -6,10 +6,11 @@ export interface ITask {
   sourceInterface: string
   targetInterface: string
   type: TaskType
+  goal: any
 }
 
 export enum TaskType {
-  MANUAL_MAP,
-  TRANSFORM_MAP,
-  ADD_INTERFACE
+  MANUAL,
+  TOOL_ONLY,
+  TOOL_FULL
 }

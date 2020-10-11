@@ -8,6 +8,7 @@ import { ExplanationModule } from './explanation/explanation.module';
 import { DescribeModule } from './describe/describe.module';
 import { TransformationModule } from './transformation/transformation.module';
 import { MatIconModule } from '@angular/material/icon';
+import { EvaluationModule } from './evaluation/evaluation.module';
 
 @NgModule({
   declarations: [
@@ -18,7 +19,7 @@ import { MatIconModule } from '@angular/material/icon';
     MatButtonModule,
     MatToolbarModule,
     RouterModule,
-    ExplanationModule,
+    EvaluationModule,
     DescribeModule,
     TransformationModule,
     MatIconModule

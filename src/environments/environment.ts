@@ -1,10 +1,14 @@
 // This file can be replaced during build by using the `fileReplacements` array.
 // `ng build --prod` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
+const adapterServiceBase = "localhost";
+const adapterServicePort = "8080";
 
 export const environment = {
   production: false,
-  adapterServiceBaseUrl: "https://localhost:8080",
+  adapterServiceBase,
+  adapterServicePort,
+  adapterServiceBaseUrl: `https://${adapterServiceBase}:${adapterServicePort}`,
   firebase: {
     apiKey: "AIzaSyAzYN7Id-HtrJxZt6SNGUwDJ11gLDOlFDg",
     authDomain: "integrateit-41c60.firebaseapp.com",

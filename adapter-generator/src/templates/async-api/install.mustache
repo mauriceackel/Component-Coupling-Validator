@@ -1,0 +1,14 @@
+#/bin/bash
+sudo apt-get update
+sudo apt-get install -y npm nodejs
+
+cd project
+npm i
+
+cd source && npm i && cd ..
+
+cd targets
+{{#targets}}
+cd {{id}} && npm i && cd ..
+{{/targets}}
+cd ..

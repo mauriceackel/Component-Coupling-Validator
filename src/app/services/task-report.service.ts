@@ -33,7 +33,7 @@ export class TaskReportService {
     }
   }
 
-  private serializeTaskReport(taskReport: ITaskReport) {
+  private serializeTaskReport(taskReport: Partial<ITaskReport>) {
     let result = {
       ...taskReport,
       id: undefined
@@ -44,10 +44,11 @@ export class TaskReportService {
 
   public async createTaskReport(taskReport: ITaskReport) {
     const id = this.firestore.createId();
-    return this.taskReportColl.doc(id).set(this.serializeTaskReport(taskReport));
+    await this.taskReportColl.doc(id).set(this.serializeTaskReport(taskReport));
+    return id;
   }
 
-  public async updateTaskReport(taskReport: ITaskReport) {
+  public async updateTaskReport(taskReport: Partial<ITaskReport>) {
     return this.taskReportColl.doc(taskReport.id).update(this.serializeTaskReport(taskReport));
   }
 
