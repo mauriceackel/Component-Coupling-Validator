@@ -89,6 +89,7 @@ export class TaskService {
         id: undefined,
         createdBy: this.authService.User.uid,
         task: this._activeTask.id,
+        start: Date.now(),
         time: -1
       }
       this._activeTaskReportId = await this.taskReportService.createTaskReport(taskReport);
@@ -116,7 +117,8 @@ export class TaskService {
     if(this._taskRunning) {
       let taskReport: Partial<ITaskReport> = {
         id: this._activeTaskReportId,
-        time: this.elapsedTime + (Date.now() - this.taskStartTimestamp)
+        time: this.elapsedTime + (Date.now() - this.taskStartTimestamp),
+        end: Date.now()
       }
       this.taskReportService.updateTaskReport(taskReport);
       this.httpClient.get(`${dockerControllerUrl}/${this.ActiveTaskReportId}`).toPromise();

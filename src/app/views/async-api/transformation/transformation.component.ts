@@ -277,12 +277,14 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
       this.mappingError = undefined;
 
-      await this.taskReportService.updateTaskReport({
-        id: this.taskService.ActiveTaskReportId,
-        mapping: {
-          messageMappings: mapping.messageMappings,
-        }
-      });
+      if (this.taskService.TaskRunning) {
+        await this.taskReportService.updateTaskReport({
+          id: this.taskService.ActiveTaskReportId,
+          mapping: {
+            messageMappings: mapping.messageMappings,
+          }
+        });
+      }
 
       const { port, token } = await this.adapterService.createAsyncApiAdapter(mapping, AdapterType.JAVASCRIPT, this.taskService.ActiveTaskReportId);
       await this.showTokenDialog(token);

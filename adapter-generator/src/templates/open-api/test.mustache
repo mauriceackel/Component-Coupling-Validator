@@ -1,6 +1,7 @@
 const source = require('./source/src/index');
 const firebase = require('firebase');
 const { diff } = require('deep-object-diff');
+const fs = require('fs');
 
 const firebaseConfig = {
   apiKey: "AIzaSyAzYN7Id-HtrJxZt6SNGUwDJ11gLDOlFDg",
@@ -22,25 +23,32 @@ async function test(response) {
   console.log('Final Server Response:\n', response);
 
   const taskReportRef = firebase.firestore().collection('task-reports').doc('{{taskReportId}}');
+  const taskReportData = await taskReportRef.get().then(snap => snap.data());
 
-  const taskId = await taskReportRef.get().then(snap => snap.data().task);
+  const taskId = taskReportData.task;
   const goal = await firebase.firestore().collection('tasks').doc(taskId).get().then(snap => snap.data().goal);
 
   const dataDiff = diff(response, goal);
 
+  const success = Object.keys(dataDiff).length === 0;
+
   await taskReportRef.update({
+    firstSuccess: (success && !taskReportData.firstSuccess) ? Date.now() : taskReportData.firstSuccess,
+    installTime: fs.readFileSync('install_time.txt').toString() + ' seconds',
     testResults: firebase.firestore.FieldValue.arrayUnion({
       time: Date.now(),
-      result: response,
-      diff: dataDiff
+      result: response || 'undefined',
+      diff: dataDiff,
     })
   });
 
-  if(Object.keys(dataDiff).length === 0) {
+  if(success) {
     console.info('You successfully finished the task. NOW PLEASE RETURN TO THE TOOL WEBSITE AND CLICK ON THE "FINISH TASK" BUTTON');
   } else {
-    console.warn('You have errors in your result');
+    console.warn('You have errors in your result, please fix them and try again. Your diff:', dataDiff);
   }
+
+  process.exit(0);
 }
 
 async function main() {

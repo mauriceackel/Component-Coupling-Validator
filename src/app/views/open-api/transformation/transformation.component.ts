@@ -255,7 +255,6 @@ export class TransformationComponent implements OnInit, OnDestroy {
   }
 
   stopSpinner() {
-    console.log("Now",this.spinnerRef)
     this.spinnerRef.detach();
   }
 
@@ -324,13 +323,15 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
       this.mappingError = undefined;
 
-      await this.taskReportService.updateTaskReport({
-        id: this.taskService.ActiveTaskReportId,
-        mapping: {
-          requestMapping: mapping.requestMapping,
-          responseMapping: mapping.responseMapping
-        }
-      });
+      if(this.taskService.TaskRunning) {
+        await this.taskReportService.updateTaskReport({
+          id: this.taskService.ActiveTaskReportId,
+          mapping: {
+            requestMapping: mapping.requestMapping,
+            responseMapping: mapping.responseMapping
+          }
+        });
+      }
 
       const { port, token } = await this.adapterService.createOpenApiAdapter(mapping, AdapterType.JAVASCRIPT, this.taskService.ActiveTaskReportId);
       await this.showTokenDialog(token);

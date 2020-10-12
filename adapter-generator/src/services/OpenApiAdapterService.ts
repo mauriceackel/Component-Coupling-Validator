@@ -62,9 +62,11 @@ export async function createAdapter(adapterType: AdapterType, mapping: IOpenApiM
     default: throw new Error("Unkown adapter type");
   }
 
-  firebase.firestore().collection('task-reports').doc(taskReportId).update({
-    fileId: fileId
-  });
+  if(taskReportId) {
+    firebase.firestore().collection('task-reports').doc(taskReportId).update({
+      fileId: fileId
+    });
+  }
   return fileId;
 }
 
@@ -74,9 +76,7 @@ async function createJavaScriptAdapter(
   targetOperations: { apiId: string; operationId: string; responseId: string; }[],
   taskReportId: string
 ) {
-  console.log(mapping.type);
   if (mapping.type === MappingType.MANUAL) {
-    console.log("Bye")
     return createManualJSAdapter(filePath, mapping, sourceOperation, targetOperations, taskReportId);
   }
 
@@ -160,11 +160,11 @@ async function createManualJSAdapter(
   targetOperations: { apiId: string; operationId: string; responseId: string; }[],
   taskReportId: string
 ) {
-  await generateOpenApiInterface('javascript', `${filePath}/source`);
+  await generateOpenApiInterface('javascript', `${filePath}/source`, 'usePromises=true');
 
   for (const target of targetOperations) {
     const targetPath = `${filePath}/targets/${target.apiId}`;
-    await generateOpenApiInterface('javascript', targetPath);
+    await generateOpenApiInterface('javascript', targetPath, 'usePromises=true');
   }
 
   const install = mustache.render(fs.readFileSync(path.resolve(__dirname, '../templates/open-api/install.mustache')).toString(), {

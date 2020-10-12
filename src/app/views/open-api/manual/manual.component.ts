@@ -268,13 +268,15 @@ export class ManualComponent implements OnInit, OnDestroy {
       const targets = this.parseTargets();
       const mapping = this.mappingService.buildOpenApiMapping(source, targets, [], [], MappingType.MANUAL);
 
-      await this.taskReportService.updateTaskReport({
-        id: this.taskService.ActiveTaskReportId,
-        mapping: {
-          requestMapping: mapping.requestMapping,
-          responseMapping: mapping.responseMapping
-        }
-      });
+      if (this.taskService.TaskRunning) {
+        await this.taskReportService.updateTaskReport({
+          id: this.taskService.ActiveTaskReportId,
+          mapping: {
+            requestMapping: mapping.requestMapping,
+            responseMapping: mapping.responseMapping
+          }
+        });
+      }
 
       const { port, token } = await this.adapterService.createOpenApiAdapter(mapping, AdapterType.JAVASCRIPT, this.taskService.ActiveTaskReportId);
       await this.showTokenDialog(token);

@@ -67,9 +67,11 @@ export async function createAdapter(adapterType: AdapterType, mapping: IAsyncApi
     default: throw new Error("Unkown adapter type");
   }
 
-  firebase.firestore().collection('task-reports').doc(taskReportId).update({
-    fileId: fileId
-  });
+  if(taskReportId) {
+    firebase.firestore().collection('task-reports').doc(taskReportId).update({
+      fileId: fileId
+    });
+  }
   return fileId;
 }
 
