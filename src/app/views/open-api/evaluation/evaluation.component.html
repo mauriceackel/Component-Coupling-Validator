@@ -42,19 +42,20 @@
           Please read the following instructions the task carefully!
           <br><br>
           <ul>
-          <li>The goal of this evaluation is to test three methods for formalizing mappings 
-            of HTTP-Request and -Responses Mappings based on JSON-Attributes</li>
+          <li>The goal of this evaluation is to collect engineering data for formalizing mappings 
+            of HTTP-Request and -Responses Mappings based on JSON-Attributes. There exist a manual and a supported version for doing so.</li>
+          <li>Unless explicitly indicated otherwise, you will only work with "OpenAPI"</li>
             <ul>
-              <li>The "MANUAL" method is equivalent to implementing a software adpater</li>
-              <li>The "TRANSFORMATION" method is reusing already present mappings stored in a knowledge base</li>
-              <li>The "JSONLD" method is equivalent to using a standard for describing mappings</li>
+              <li>The "MANUAL" method is equivalent to implementing a software adpater using an IDE (e.g. Visual Studio Code)</li>
+              <li>The "SUPPORTED" method is 1) using a code generator to abstract and may be 2) reusing already present mappings stored in a knowledge base</li>
             </ul>
-          <li>The evaluation period will last from 04.05.2020 until 18.05.2020</li>
-          <li>You may need longer for solving the tasks in the beginning. Expected for a task up to 20 minutes of workload
+          <li>The evaluation period will last from 21.10.2020 until 16.12.2020</li>
+          <li>You may need longer for solving the tasks in the beginning. Expect for tasks up to 60 minutes of workload per week.
           </li>
-          <li>Please familiarize yourself with the different views first.Therefore, please click on the views MANUAL/TRANSOFRMATION/JSONLD and select "GET EXAMPLE1" as a Mapping Source and "GET EXAMPLE 2" as a Mapping Target</li>
+          <li>Please familiarize yourself with the tool first. Therefore, please select "GET EXAMPLE1" as a Mapping Source and "GET EXAMPLE 2" as a Mapping Target</li>
           <li>There are several depencendies when working on the tasks listed. These are defined as follows:</li>
           <br>
+          <b>Tasks valid from 21.10.2020 until 28.10.2020. Last possible submission date is 28.10.2020 14:00 Romanian Time/15:00 German Time.</b>
           <table style="width:100%; text-align:center;" border="1">
             <tr>
               <th>Taskname</th>
@@ -63,75 +64,39 @@
               <th>Inform next Participant</th>
             </tr>
             <tr>
-              <td>MANUAL Phillips-Yeelight</td>
+              <td>MANUAL Bose-Sonos</td>
               <td>-</td>
-              <td>Flavia</td>
+              <td>Sven</td>
               <th>-</th>
             </tr>
             <tr>
-              <td>MANUAL Yeelight-lifx</td>
+              <td>MANUAL Bose-Sonos</td>
               <td>-</td>
-              <td>Marius, Bogdan</td>
+              <td>Mark</td>
               <th>-</th>
             </tr>
             <tr>
-              <td>MANUAL Phillips-Lifx</td>
+              <td>MANUAL Bose-Sonos</td>
               <td>-</td>
-              <td>Peter, Raluca</td>
+              <td>Miruna</td>
               <th>-</th>
             </tr>
             <tr>
-              <td>TRANSFORMATION Phillips-Yeelight</td>
+              <td>SUPPORTED Bose-Sonos</td>
               <td>-</td>
-              <td>Marius</td>
-              <th>Andreea</th>
+              <td>Sven</td>
+              <th></th>
             </tr>
             <tr>
-              <td>TRANSFORMATION Yeelight-Lifx</td>
+              <td>SUPPORTED Sonos-Sony</td>
               <td>-</td>
-              <td>Flavia</td>
-              <th>Andreea</th>
+              <td>Mark</td>
+              <th>Miruna</th>
             </tr>
             <tr>
-              <td>TRANSFORMATION Phillips-Lifx</td>
-              <td>TRANSFORMATION Phillips-Yeelight and TRANSFORMATION Phillips-Lifx</td>
-              <td>Andreea</td>
-              <th>-</th>
-            </tr>
-            <tr>
-              <td>JSONLD Phillips</td>
-              <td>-</td>
-              <td>Andreea</td>
-              <th>Tobias, Bogdan</th>
-            </tr>
-            <tr>
-              <td>JSONLD Yeelight</td>
-              <td>-</td>
-              <td>Raluca</td>
-              <th>Tobias, Peter</th>
-            </tr>
-            <tr>
-              <td>JSONLD Lifx</td>
-              <td>-</td>
-              <td>Tobias</td>
-              <th>Bogdan, Peter</th>
-            </tr>
-            <tr>
-              <td>JSONLD Phillips-Yeelight</td>
-              <td>JSONLD Phillips and JSONLD Yeelight</td>
-              <td>Tobias</td>
-              <th>-</th>
-            </tr>
-            <tr>
-              <td>JSONLD Phillips-Lifx</td>
-              <td>JSONLD Phillips and JSONLD Lifx</td>
-              <td>Bogdan</td>
-              <th>-</th>
-            </tr>
-            <tr>
-              <td>JSONLD Yeelight-Lifx</td>
-              <td>JSONLD Yeelight and JSONLD Lifx</td>
-              <td>Peter</td>
+              <td>SUPPORTED Sony-Sonos</td>
+              <td>SUPPORTED Sonos-Sony</td>
+              <td>Miruna</td>
               <th>-</th>
             </tr>
           </table>
@@ -146,36 +111,19 @@
             <li>If the colum "Inform next Participant" is not empty, please inform the mentioned participant (e.g. via Discord, ..)
               that the task has been finished.
             </li>
+            <li>In every other scenario, just start with the task
+            </li>
           </ul>
         </li>
           <li>Click on "Start"
           <ul>
-            <li>MANUAL AND TRANSFORMATION Tasks</li>
+            <li>Web UI functionality</li>
             <ul>
               <li>Select pairs of attributes from the left and right by clicking on them based on your interpretation</li>
               <li>After selecting one attribute from each side, click on "Map Selceted"</li>
               <li>For Request Mappings, all attributes from the "Target Request Body" must be mapped</li>
               <li>For Response Mappings, all attributes from the "Source Response Body" must be mapped</li>
               <li>If some mappings are prefilled, you can reuse them immmediatly</li>
-            </ul>
-            <li>JSONLD Tasks</li>
-            <ul>
-              <li>You may need to textually specify the mappings using the JSONLD syntax prior to using the graphical mapping view</li>
-              <li>For searching, please use  <a href="http://dbpedia.org/fct/" target="_blank">DBpedia</a> by using the Entity Label Lookup</li>
-              <ul><li>You can identify the URL by clicking on the "JSON-LD" Logo at the bottom of the result page and copy and paste the @id field</li></ul>
-              <li>If you cannot identify a desired item within the dbpedia.org vocabulary, you can also use any other knowledge base</li>
-              <li>If you are seeing only one interface, you have to create a new JSON-LD file</li>
-              <ul>
-                <li>Only enter the JsonLd context without the enclosing @context</li>
-                <li>Please "Store" the textual definitions everytime you make a change</li>
-                <li>You can view all attributes in the "Interface Model Values" view</li>
-              </ul>
-              <li>If you are seeing two interfaces with JSON-LD description, you can execute try executiing the request directly
-                <ul><li>You are not allowed to edit any JSON-LD deccriptions in this view</li></ul>
-              </li>
-              <li>Second, continue with the "Mapping" View</li>
-              <li>All information from both JSON-LD descriptions are rendered into this view automatically if they can be parsed</li>
-              <li>If you cannot find a suitable URL that fits your attribute, you can map the attributes similar to the MANUAL/TRANSFORMATION tasks as well</li>
             </ul>
           </ul>
         </li>
@@ -187,30 +135,40 @@
             <li>If your mappings are correct, then you sould see a valid response with the attrbutes of the "Source Request Body" in the "Output Data" field</li>
           </ul>
         </li>
-        <li>After you have mapped all required attirbutes, you can finish your task by clicking on Finish Mapping"
+        <li>After you have mapped all required attirbutes, you will need to generate the software adapter</li>
+        <ul>
+          <li>When you click on "Build Adapter", you will receive an authentification toke</li>
+          <li>This token must be copied and inserted on the website that wull be opened up automatically</li>
+          <li>Within the generated software porject, you have to execute "node index.js" to check whether the adapter is working</li>
+          <li>If the testcase is successfull, you can proceed with the next step</li>
+          <li>If the testcase is unsuccessfull, you need to adapt the generated code manually</li>
           <ul>
-            <li>When the task is sucessfully finished, you will see a corresponding message. Please inform Fabian shortly in the Discord channel "supervisors"</li>
+            <li>If you face any unsolvable difficulties, please also continue with the next step</li>
+            <li>Please send a short notice to <a href="mailto:burzlaff@es.uni-mannheim.de">burzlaff@es.uni-mannheim.de</a> why you could not finish the task
+            including the displayed error message, if available.</li>
+          </ul>
+        </ul>
+        <li> You can finish your task by clicking on "Finish Task"
+          <ul>
+            <li>When your task is finished, you will see a corresponding message. Please inform Fabian shortly in the Discord channel "#general"</li>
             <li>If there exist any error, then an Error-Message will be displayed at the bottom of the site</li>
           </ul>
         </li>
           <li>You can abort abort a task or reset the application at any time
           <ul>
             <li>In the "Task Overview", clicking on "Abort" may be required if you selcted the wrong task</li>
-            <li>In the "Mapping Overview", clicking on "Reset" may be required if you cannot finish a task for any reason. Please send 
-              a short notice to <a href="mailto:burzlaff@es.uni-mannheim.de">burzlaff@es.uni-mannheim.de</a> why you could not finish the task
-            including the displayed error message
-          </li>
+            <li>In the "Mapping Overview", clicking on "Reset" may be required if you want to reset all UI elements </li>
           </ul>
         </li>
         </ol>
           Please note the following remarks for working with this prototype:
           <br><br>
           <ul>
-          <li>You can navigate back to this overview page at any time by clicking on [BACK TO TASK OVERVIEW]</li>
+          <li>You can navigate back to the start page at any time by clicking on "HOME"</li>
           <li>You can open multiple tabs displaying different site content at the same time</li>
           <li>If you cannot find a button or other UI elements, try to scroll up and down</li>
           <li>Try not to use the refresh functionality of your browser (e.g. STRG+R). This may result in loss of unsaved work</li>
-          <li>When you start a task, the time is measured automatically
+          <li>When you start a task, the time is measured automatically</li>
           <li>You can also send any suggestions for improvements (e.g. annotated screenshot) at any 
             time to <a href="mailto:burzlaff@es.uni-mannheim.de">burzlaff@es.uni-mannheim.de</a></li>
           </ul>
