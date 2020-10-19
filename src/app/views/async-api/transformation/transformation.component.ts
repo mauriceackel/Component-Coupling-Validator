@@ -287,8 +287,9 @@ export class TransformationComponent implements OnInit, OnDestroy {
       }
 
       const { port, token } = await this.adapterService.createAsyncApiAdapter(mapping, AdapterType.JAVASCRIPT, this.taskService.ActiveTaskReportId);
-      await this.showTokenDialog(token);
-      window.open(`${adapterServiceBase}:${port}`, "_blank");
+      const url = `http://${adapterServiceBase}:${port}`;
+      await this.showTokenDialog(token, url);
+      window.open(url, "_blank");
     } catch (err) {
       if (err instanceof AsyncApiValidationError) {
         this.mappingError = err;
@@ -351,14 +352,14 @@ export class TransformationComponent implements OnInit, OnDestroy {
     });
   }
 
-  private showTokenDialog(token: string) {
+  private showTokenDialog(token: string, url: string) {
     const dialogRef: MatDialogRef<GenericDialog, void> = this.dialog.open(GenericDialog, {
       position: {
         top: "5%"
       },
       data: {
         title: "Continue Editing",
-        content: `You will be taken to another service now. Copy the following token to log in:\n\n${token}`,
+        content: `You will be taken to another service now to finish the mapping.\n\n\nIf you don't get automatically redirected, open the following url in a NEW TAB!\n\n\n${url}\n\n\nCopy the following token to log in:\n\n\n${token}`,
         buttons: [ButtonType.OK]
       }
     });
