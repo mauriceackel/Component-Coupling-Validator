@@ -58,7 +58,7 @@ service cloud.firestore {
 
     match /task-reports/{reportId} {
       // Everyone can read the interface descriptions
-      allow get, list, delete: if isAdmin();
+      allow get, list, delete: if isAdmin() || matchesAuthId(resource.data.createdBy);
       allow update: if true;
       allow create: if isAdmin() || matchesAuthId(request.resource.data.createdBy);
     }
