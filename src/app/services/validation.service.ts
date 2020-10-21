@@ -74,14 +74,14 @@ export class ValidationService {
       // source = consumer & targets = consumer
       // All source-props need to be mapped for every target's props
       const sourceBody = await this.getSourceMessageBody(source);
-      for (const targetId of Object.keys(targets)) {
+      for(const targetId of Object.keys(targets)) {
         missing.push(...this.findMissing(JSON.parse(mapping.messageMappings[targetId] || "{}"), sourceBody));
       }
     } else if (direction === MappingDirection.OUTPUT) {
       // source = producer & targets = producer
       // Each target-prop needs to be mapped
       const targetBodies = await this.getTargetMessageBodies(targets);
-      for (const targetId of Object.keys(targets)) {
+      for(const targetId of Object.keys(targets)) {
         //We only require a match for one specific targetId, but we need to prefix it again so that the keys match
         const required = { [targetId]: targetBodies[targetId] };
         missing.push(...this.findMissing(JSON.parse(mapping.messageMappings[targetId] || "{}"), required));
@@ -98,12 +98,8 @@ export class ValidationService {
   public findMissing(provided: any, required: any, keyChain: KeyChain = []): Array<KeyChain> {
     let result = new Array<KeyChain>();
 
-    const providedKeys = Object.entries(flatten(provided))
-      .filter(([key, val]) => typeof val !== 'object')
-      .map(([key, val]) => key);
-    const requiredKeys = Object.entries(flatten(required))
-      .filter(([key, val]) => typeof val !== 'object')
-      .map(([key, val]) => key);
+    const providedKeys = Object.keys(flatten(provided));
+    const requiredKeys = Object.keys(flatten(required));
 
     for (const requiredKey of requiredKeys) {
       if (!providedKeys.includes(requiredKey)) {
