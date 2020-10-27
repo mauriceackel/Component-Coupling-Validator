@@ -53,6 +53,18 @@
           <li>You may need longer for solving the tasks in the beginning. Expect for tasks up to 60 minutes of workload per week.
           </li>
           <li>Please familiarize yourself with the tool first. Therefore, please select "Server Endpoint - Example1" as a Mapping Source and "Server Endpoint - Example2" as a Mapping Target</li>
+          <li>Use Case: The overall storyline from a software engineers point of view is the following:</li>
+          <ul>
+            <li>Imagine you are the owner of an IoT application running on your smartphone</li>
+            <li>This application is reading and writing sensor values from an temperature sensor</li>
+            <li>During the initial implementation, the software engineer decided to call a concrete http service running on a device which was
+              manufactured by SIEMENS
+            </li>
+            <li>Now, the SIEMENS device endpoint should be replaced with a device endpoint offered by APPLE</li>
+            <li>As the application logic should not be changed, your are required a software adapter that transforms the values received
+              from the APPLE device to values from the SIEMENS device
+            </li>
+          </ul>
           <li>There are several depencendies when working on the tasks listed. These are defined as follows:</li>
           <br>
           <b>Tasks valid from 21.10.2020 until 28.10.2020. Last possible submission date is 28.10.2020 14:00 Romanian Time/15:00 German Time.</b>
@@ -64,38 +76,38 @@
               <th>Inform next Participant</th>
             </tr>
             <tr>
-              <td>MANUAL Bose-Sonos</td>
+              <td>SUPPORTED Example1 - Example2</td>
               <td>-</td>
               <td>Sven</td>
               <th>-</th>
             </tr>
             <tr>
-              <td>MANUAL Bose-Sonos</td>
+              <td>SUPPORTED Example1 - Example2</td>
               <td>-</td>
               <td>Mark</td>
               <th>-</th>
             </tr>
             <tr>
-              <td>MANUAL Bose-Sonos</td>
+              <td>SUPPORTED Example1 - Example2</td>
               <td>-</td>
               <td>Miruna</td>
               <th>-</th>
             </tr>
             <tr>
-              <td>SUPPORTED Bose-Sonos</td>
+              <td>MANUAL Example1 - Example2</td>
               <td>-</td>
               <td>Sven</td>
-              <th></th>
+              <th>-</th>
             </tr>
             <tr>
-              <td>SUPPORTED Sonos-Sony</td>
+              <td>MANUAL Example1 - Example2</td>
               <td>-</td>
               <td>Mark</td>
-              <th>Miruna</th>
+              <th>-</th>
             </tr>
             <tr>
-              <td>SUPPORTED Sony-Sonos</td>
-              <td>SUPPORTED Sonos-Sony</td>
+              <td>MANUAL Example1 - Example2</td>
+              <td>-</td>
               <td>Miruna</td>
               <th>-</th>
             </tr>
@@ -117,7 +129,7 @@
         </li>
           <li>Click on "Start"
           <ul>
-            <li>Web UI functionality</li>
+            <li>Web UI functionality for SUPPORTED Tasks</li>
             <ul>
               <li>Select pairs of attributes from the left and right by clicking on them based on your interpretation</li>
               <li>After selecting one attribute from each side, click on "Map Selceted"</li>
@@ -125,9 +137,15 @@
               <li>For Response Mappings, all attributes from the "Source Response Body" must be mapped</li>
               <li>If some mappings are prefilled, you can reuse them immmediatly</li>
             </ul>
+            <li>Web UI functionality for MANUAL Tasks</li>
+            <ul>
+              <li>These types of tasks do not allow for creating mappings within the User Interface</li>
+              <li>The tool supports you only in generating the software adpater project</li>
+              <li>Hence, please read the upcoming transformations regarding "testcase is unsuccessfull" carefully</li>
+            </ul>
           </ul>
         </li>
-        <li>You can test your mapping at any time using the "Test Mapping" functionality 
+        <li>SUPPORTED TASKS ONLY: You can test your mapping at any time using the "Test Mapping" functionality 
           <ul>
             <li>By clicking on "Test Request" all available request mappings are applied to the "Source Request Body" and send to the "Maping Target"</li>
             <li>Similar, all available response mappings are applied to the repsonse from the "Mapping Target" </li>
@@ -135,13 +153,31 @@
             <li>If your mappings are correct, then you sould see a valid response with the attrbutes of the "Source Request Body" in the "Output Data" field</li>
           </ul>
         </li>
-        <li>After you have mapped all required attirbutes, you will need to generate the software adapter</li>
+        <li>Next, you will need to generate the software adapter</li>
         <ul>
           <li>When you click on "Build Adapter", you will receive an authentification toke</li>
           <li>This token must be copied and inserted on the website that wull be opened up automatically</li>
-          <li>Within the generated software porject, you have to execute "node index.js" to check whether the adapter is working</li>
-          <li>If the testcase is successfull, you can proceed with the next step</li>
+          <li>Within this new window (Visual Studio Code as a web version), you have to perform the following steps</li>
+          <li>First, open a new terminal by opening the menu in the upper left corner (click on three horizontal lines) and select Terminal -> New Terminal</li>
+          <li>Next, you have to excute "sh project/install.sh ". This will install all required depencendies - Please wait until finished</li>
+          <li>Then, you have to switch into the project folder by executing "cd project"</li>
+          <li>Next, please open up the file project/test.js</li>
+          <ul>
+            <li>Insert your email-address and password that you also use to login into the tool at place "TODO1"</li>
+            <li>Open the file project/source/src/api/DefaultApi.js and copy ONLY the method name of the last method</li>
+            <li>Insert this method name in the test.js at "TODO2" after "ApiInterface.CHANGE_THIS_METHOD_NAME"</li>
+          </ul>
+          <li>Now, you can execute "node test.js" to check whether your adapter has been generated successfully</li>
+          <li>If the testcase is successfull, you can proceed with the next step presented in the terminal</li>
           <li>If the testcase is unsuccessfull, you need to adapt the generated code manually</li>
+          <ul>
+            <li>Therefore, you have to implement the method "getAddressWithHttpInfo" in project/source/src/api/DefaultApi.js</li>
+            <li>First, you have to call all provided APIs from the target folder</li>
+            <li>You can check which methods are available by having a look in all files found under project/targets/.../src/api/DefaultApi.js. Each last method name is callable
+              and backed up by a real service</li>
+            <li>Each received JSON from these target services can be used to create required json file by the provided source service</li>
+            <li>Again, as soon "node test.js" passes, you can proceed with the next step presented in the terminal</li>
+          </ul>
           <ul>
             <li>If you face any unsolvable difficulties, please also continue with the next step</li>
             <li>Please send a short notice to <a href="mailto:burzlaff@es.uni-mannheim.de">burzlaff@es.uni-mannheim.de</a> why you could not finish the task
@@ -169,6 +205,8 @@
           <li>If you cannot find a button or other UI elements, try to scroll up and down</li>
           <li>Try not to use the refresh functionality of your browser (e.g. STRG+R). This may result in loss of unsaved work</li>
           <li>When you start a task, the time is measured automatically</li>
+          <li>If you close your web ide by accident, you should abort and restart your task</li>
+          <li>As soon as "node test.js" passes all tests, the web ide will be automatically terminated after a few seconds</li>
           <li>You can also send any suggestions for improvements (e.g. annotated screenshot) at any 
             time to <a href="mailto:burzlaff@es.uni-mannheim.de">burzlaff@es.uni-mannheim.de</a></li>
           </ul>
