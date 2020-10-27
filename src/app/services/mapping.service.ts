@@ -362,6 +362,8 @@ export class MappingService {
    * @param targets The target interfaces
    */
   public async buildOpenApiMappingPairs(source: IOpenApiInterface, targets: { [key: string]: IOpenApiInterface }): Promise<{ request: Array<IMappingPair>, response: Array<IMappingPair> }> {
+    const start = Date.now();
+
     const sourceId = `${source.api.id}_${source.operationId}_${source.responseId}`;
     const targetIds = Object.keys(targets);
 
@@ -448,6 +450,8 @@ export class MappingService {
     requestMapping = unflatten(requestMapping);
     responseMapping = unflatten(responseMapping);
 
+    const end = Date.now();
+    console.log(end - start);
     return {
       request: this.transToMappingPairs(requestMapping),
       response: this.transToMappingPairs(responseMapping)
@@ -455,6 +459,8 @@ export class MappingService {
   }
 
   public async buildAsyncApiMappingPairs(source: IAsyncApiInterface, targets: { [key: string]: IAsyncApiInterface }, direction: MappingDirection): Promise<Array<IMappingPair>> {
+    const start = Date.now();
+
     const sourceId = `${source.api.id}_${source.operationId}`;
     const targetIds = Object.keys(targets);
 
@@ -541,6 +547,8 @@ export class MappingService {
       mappingPairs.push(...pairs);
     }
 
+    const end = Date.now();
+    console.log(end - start);
     return mappingPairs;
   }
 
