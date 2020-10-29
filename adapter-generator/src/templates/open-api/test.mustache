@@ -4,20 +4,21 @@ const { diff } = require('deep-object-diff');
 const fs = require('fs');
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAzYN7Id-HtrJxZt6SNGUwDJ11gLDOlFDg",
-  authDomain: "integrateit-41c60.firebaseapp.com",
-  databaseURL: "https://integrateit-41c60.firebaseio.com",
-  projectId: "integrateit-41c60",
-  storageBucket: "integrateit-41c60.appspot.com",
-  messagingSenderId: "287628349300",
-  appId: "1:287628349300:web:70bba41d86cba288446621"
+  apiKey: "AIzaSyBqprtWjwl-DRNKIQTiTOIpKT_btIHwBqM",
+  authDomain: "eval-d2be2.firebaseapp.com",
+  databaseURL: "https://eval-d2be2.firebaseio.com/",
+  projectId: "eval-d2be2",
+  storageBucket: "eval-d2be2.appspot.com",
+  messagingSenderId: "306037936402",
+  appId: "1:306037936402:web:16af2bbc0e2bb2de9ea3cb",
+  measurementId: "G-HRDK5LLMBK"
 };
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
 async function test(response) {
-  //TODO: Fill in your username and password here
+  //TODO 1: Fill in your username and password here
   await firebase.auth().signInWithEmailAndPassword("your.email@example.com", "YOUR_PASSWORD");
 
   console.log('Final Server Response:\n', response);
@@ -26,14 +27,15 @@ async function test(response) {
   const taskReportData = await taskReportRef.get().then(snap => snap.data());
 
   const taskId = taskReportData.task;
-  const goal = await firebase.firestore().collection('tasks').doc(taskId).get().then(snap => snap.data().goal);
+  const jsonGoal = await firebase.firestore().collection('tasks').doc(taskId).get().then(snap => snap.data().goal);
+  const goal = JSON.parse(jsonGoal);
 
   const dataDiff = diff(response, goal);
 
   const success = Object.keys(dataDiff).length === 0;
 
   await taskReportRef.update({
-    firstSuccess: (success && !taskReportData.firstSuccess) ? Date.now() : taskReportData.firstSuccess,
+    firstSuccess: (success && !taskReportData.firstSuccess) ? Date.now() : (taskReportData.firstSuccess || null),
     installTime: fs.readFileSync('install_time.txt').toString() + ' seconds',
     testResults: firebase.firestore.FieldValue.arrayUnion({
       time: Date.now(),
@@ -59,13 +61,11 @@ async function main() {
     q: 'test'
   };
   try {
-    //TODO: Call the right function
+    //TODO 2: Call the right function
     const response = await ApiInterface.CHANGE_THIS_METHOD_NAME(request);
     await test(response);
-    //TODO: Send back to server
   } catch (err) {
     console.log(err);
-    //TODO: Log error to DB
   }
 }
 
