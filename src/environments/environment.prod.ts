@@ -1,5 +1,5 @@
 const adapterServiceBase = "iot.informatik.uni-mannheim.de";
-const adapterServicePort = "8200";
+const adapterServicePort = "8199";
 
 export const environment = {
   production: true,
