@@ -7,12 +7,13 @@ export const environment = {
   adapterServicePort,
   adapterServiceBaseUrl: `https://${adapterServiceBase}:${adapterServicePort}`,
   firebase: {
-    apiKey: "AIzaSyAzYN7Id-HtrJxZt6SNGUwDJ11gLDOlFDg",
-    authDomain: "integrateit-41c60.firebaseapp.com",
-    databaseURL: "https://integrateit-41c60.firebaseio.com",
-    projectId: "integrateit-41c60",
-    storageBucket: "integrateit-41c60.appspot.com",
-    messagingSenderId: "287628349300",
-    appId: "1:287628349300:web:70bba41d86cba288446621"
+    apiKey: "AIzaSyBqprtWjwl-DRNKIQTiTOIpKT_btIHwBqM",
+    authDomain: "eval-d2be2.firebaseapp.com",
+    databaseURL: "https://eval-d2be2.firebaseio.com",
+    projectId: "eval-d2be2",
+    storageBucket: "eval-d2be2.appspot.com",
+    messagingSenderId: "306037936402",
+    appId: "1:306037936402:web:16af2bbc0e2bb2de9ea3cb",
+    measurementId: "G-HRDK5LLMBK"
   }
 };
