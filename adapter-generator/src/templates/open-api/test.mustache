@@ -2,11 +2,12 @@ const source = require('./source/src/index');
 const firebase = require('firebase');
 const { diff } = require('deep-object-diff');
 const fs = require('fs');
+const Zip = require('adm-zip');
 
 const firebaseConfig = {
   apiKey: "AIzaSyBqprtWjwl-DRNKIQTiTOIpKT_btIHwBqM",
   authDomain: "eval-d2be2.firebaseapp.com",
-  databaseURL: "https://eval-d2be2.firebaseio.com/",
+  databaseURL: "https://eval-d2be2.firebaseio.com",
   projectId: "eval-d2be2",
   storageBucket: "eval-d2be2.appspot.com",
   messagingSenderId: "306037936402",
@@ -17,9 +18,12 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
+//TODO 1: Fill in your username and password here
+const username = "";
+const password = "";
+
 async function test(response) {
-  //TODO 1: Fill in your username and password here
-  await firebase.auth().signInWithEmailAndPassword("your.email@example.com", "YOUR_PASSWORD");
+  await firebase.auth().signInWithEmailAndPassword(username, password);
 
   console.log('Final Server Response:\n', response);
 
@@ -29,44 +33,80 @@ async function test(response) {
   const taskId = taskReportData.task;
   const jsonGoal = await firebase.firestore().collection('tasks').doc(taskId).get().then(snap => snap.data().goal);
   const goal = JSON.parse(jsonGoal);
-
   const dataDiff = diff(response, goal);
 
   const success = Object.keys(dataDiff).length === 0;
-
+  const now = Date.now();
   await taskReportRef.update({
-    firstSuccess: (success && !taskReportData.firstSuccess) ? Date.now() : (taskReportData.firstSuccess || null),
+    firstSuccess: (success && !taskReportData.firstSuccess) ? now : (taskReportData.firstSuccess || null),
+    firstRequestSuccess: !taskReportData.firstRequestSuccess ? now : (taskReportData.firstRequestSuccess || null),
     installTime: fs.readFileSync('install_time.txt').toString() + ' seconds',
     testResults: firebase.firestore.FieldValue.arrayUnion({
-      time: Date.now(),
+      type: 'response',
+      time: now,
       result: response || 'undefined',
       diff: dataDiff,
     })
   });
 
+  const zip = new Zip();
+  zip.addLocalFolder('./source', 'source', (f) => !f.includes('node_modules'));
+  zip.addLocalFolder('./targets', 'targets', (f) => !f.includes('node_modules'));
+  zip.writeZip(`./snapshots/${now}.zip`);
+
   if(success) {
     console.info('You successfully finished the task. NOW PLEASE RETURN TO THE TOOL WEBSITE AND CLICK ON THE "FINISH TASK" BUTTON');
   } else {
-    console.warn('You have errors in your result, please fix them and try again. Your diff:', dataDiff);
+    console.warn('You have errors in your response, please fix them and try again. Your diff:', dataDiff);
   }
-
-  process.exit(0);
 }
 
 async function main() {
   const ApiClient = source.ApiClient.instance;
   const ApiInterface = new source.DefaultApi(ApiClient);
 
-  const request = {
-    q: 'test'
-  };
+  let task, taskReportRef;
   try {
+    await firebase.auth().signInWithEmailAndPassword(username, password);
+
+    taskReportRef = firebase.firestore().collection('task-reports').doc('{{taskReportId}}');
+    const taskReportData = await taskReportRef.get().then(snap => snap.data());
+    const taskId = taskReportData.task;
+    task = await firebase.firestore().collection('tasks').doc(taskId).get().then(snap => snap.data());
+    const requestData = JSON.parse(task.requestData);
+
     //TODO 2: Call the right function
-    const response = await ApiInterface.CHANGE_THIS_METHOD_NAME(request);
+    const response = await ApiInterface.CHANGE_THIS_METHOD_NAME(requestData);
     await test(response);
   } catch (err) {
-    console.log(err);
+    if (err.status === 400) {
+      const { body, queryParameters, pathParameters } = err.body;
+      const requestResult = { body, parameters: { ...queryParameters, ...pathParameters } };
+
+      const goal = JSON.parse(task.requestGoal);
+      const dataDiff = diff(requestResult, goal);
+
+      const now = Date.now();
+      await taskReportRef.update({
+        testResults: firebase.firestore.FieldValue.arrayUnion({
+          type: 'request',
+          time: now,
+          result: requestResult || 'undefined',
+          diff: dataDiff,
+        })
+      });
+
+      const zip = new Zip();
+      zip.addLocalFolder('./source', 'source', (f) => !f.includes('node_modules'));
+      zip.addLocalFolder('./targets', 'targets', (f) => !f.includes('node_modules'));
+      zip.writeZip(`./snapshots/${now}.zip`);
+
+      console.warn('You have errors in your request, please fix them and try again. Your diff:', dataDiff);
+    } else {
+      console.log(err);
+    }
   }
+  process.exit(0);
 }
 
 main();
