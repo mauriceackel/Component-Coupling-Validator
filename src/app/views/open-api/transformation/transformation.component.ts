@@ -19,6 +19,8 @@ import { AdapterService, AdapterType } from '~/app/services/adapter.service';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ProgressIndicatorComponent } from '~/app/components/progress-indicator/progress-indicator.component';
+import { AttributeMappingService } from '~/app/services/attribute-mapping.service';
+import { flatten } from 'flat';
 
 @Component({
   selector: 'app-openapi-transformation',
@@ -62,6 +64,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
   constructor(
     private apiService: ApiService,
     private mappingService: MappingService,
+    private attributeMappingService: AttributeMappingService,
     private adapterService: AdapterService,
     private validationService: ValidationService,
     private dialog: MatDialog,
@@ -197,17 +200,20 @@ export class TransformationComponent implements OnInit, OnDestroy {
   private async initializeMapping() {
     if (!this.inputForm.valid) return;
 
-    this.showSpinner();
+    this.requestMappingPairs.push(...await this.getAllAttributeSuggestions(true));
+    this.responseMappingPairs.push(...await this.getAllAttributeSuggestions(false));
+    // TODO Reenable
+    // this.showSpinner();
 
-    const { request, response } = await this.mappingService.buildOpenApiMappingPairs(this.parseSource(), this.parseTargets());
+    // const { request, response } = await this.mappingService.buildOpenApiMappingPairs(this.parseSource(), this.parseTargets());
 
-    this.requestMappingPairs.splice(0);
-    this.requestMappingPairs.push(...request);
+    // this.requestMappingPairs.splice(0);
+    // this.requestMappingPairs.push(...request);
 
-    this.responseMappingPairs.splice(0);
-    this.responseMappingPairs.push(...response);
+    // this.responseMappingPairs.splice(0);
+    // this.responseMappingPairs.push(...response);
 
-    this.stopSpinner();
+    // this.stopSpinner();
   }
 
   mapSame(request: boolean) {
@@ -268,6 +274,103 @@ export class TransformationComponent implements OnInit, OnDestroy {
     }
   }
 
+  public async getAllAttributeSuggestions(request: boolean) {
+    const result: IMappingPair[] = [];
+
+    let attributes: any;
+    if (request) {
+      const source = this.parseSource();
+
+      const response = {
+        [`${source.api.id}_${source.operationId}_${source.responseId}`]: await getRequestSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
+      };
+
+      attributes = Object.keys(flatten(response));
+    } else {
+      const targets = this.parseTargets();
+      const request = {};
+
+      for (const [key, value] of Object.entries(targets || {})) {
+        request[key] = await getResponseSchema(value.api, { operationId: value.operationId, responseId: value.responseId })
+      }
+
+      attributes = Object.keys(flatten(request));
+    }
+
+    const mappingPairs = this.requestMappingPairs.concat(this.responseMappingPairs);
+
+    for (const attributeId of attributes) {
+      const component = await this.attributeMappingService.getComponentLocal(attributeId, mappingPairs);
+
+      let relevant: string[];
+      if (request) {
+        const targets = Object.keys(this.parseTargets());
+        relevant = component.filter(n => targets.some(t => n.startsWith(t)) && !mappingPairs.some(m => m.required.join('.') === n));
+      } else {
+        const source = this.parseSource();
+        const condition = `${source.api}_${source.operationId}_${source.responseId}`;
+        relevant = component.filter(n => n.startsWith(condition) && !mappingPairs.some(m => m.required.join('.') === n));
+      }
+
+      const suggestedMappingPairs = (await Promise.all(relevant
+        .map(async (node) => {
+          return [node, await this.attributeMappingService.getMappingLocal(attributeId, node, mappingPairs)];
+        })))
+        .map(([node, transformation]) => {
+          const mappingPair: IMappingPair = {
+            provided: [attributeId.split('.')],
+            required: node.split('.'),
+            mappingCode: transformation
+          }
+          return mappingPair;
+        });
+
+      result.push(...suggestedMappingPairs);
+    }
+
+    return result;
+  }
+
+  public async getAttributeSuggestions(mappingPair: IMappingPair, request: boolean) {
+    if (!this.attributeMappingService.validateMapping(mappingPair)) {
+      return;
+    }
+
+    const mappingPairs = this.requestMappingPairs.concat(this.responseMappingPairs);
+    const attributeId = mappingPair.provided[0].join('.');
+
+    const component = await this.attributeMappingService.getComponentLocal(attributeId, mappingPairs);
+
+    let relevant: string[];
+    if (request) {
+      const targets = Object.keys(this.parseTargets());
+      relevant = component.filter(n => targets.some(t => n.startsWith(t)) && !mappingPairs.some(m => m.required.join('.') === n));
+    } else {
+      const source = this.parseSource();
+      const condition = `${source.api}_${source.operationId}_${source.responseId}`;
+      relevant = component.filter(n => n.startsWith(condition) && !mappingPairs.some(m => m.required.join('.') === n));
+    }
+
+    const suggestedMappingPairs = (await Promise.all(relevant
+      .map(async (node) => {
+        return [node, await this.attributeMappingService.getMappingLocal(attributeId, node, mappingPairs)];
+      })))
+      .map(([node, transformation]) => {
+        const mappingPair: IMappingPair = {
+          provided: [attributeId.split('.')],
+          required: node.split('.'),
+          mappingCode: transformation
+        }
+        return mappingPair;
+      });
+
+    if (request) {
+      this.requestMappingPairs.push(...suggestedMappingPairs);
+    } else {
+      this.responseMappingPairs.push(...suggestedMappingPairs);
+    }
+  }
+
   public async finishMapping() {
     try {
       if ([...this.requestMappingPairs, ...this.responseMappingPairs].some(mp => !mp.mappingCode)) {
@@ -276,6 +379,13 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
       const source = this.parseSource();
       const targets = this.parseTargets();
+
+      //Store attribute mappings here
+      const mappingPairs = this.requestMappingPairs.concat(this.responseMappingPairs).filter(mp => this.attributeMappingService.validateMapping(mp));
+      for (const m of mappingPairs) {
+        await this.attributeMappingService.addMapping(m.provided[0].join('.'), m.required.join('.'), m.mappingCode)
+      }
+
       const mapping = this.mappingService.buildOpenApiMapping(source, targets, this.requestMappingPairs, this.responseMappingPairs, MappingType.TRANSFORMATION);
 
       await this.validationService.validateOpenApiMappingComplete(source, targets, mapping);

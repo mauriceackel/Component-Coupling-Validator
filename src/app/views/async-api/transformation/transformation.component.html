@@ -129,7 +129,7 @@
     <div class="col p-4">
       <app-mapping-zone [isPublish]="inputForm.get('publish').value" leftHeading="Source Message Body" rightHeading="Target Message Body"
         [leftData]="sourceMessageBody" [rightData]="targetMessageBodies" [mappingPairs]="mappingPairs"
-        (mapSame)="mapSame()">
+        (mapSame)="mapSame()" (mappingAdded)="getAttributeSuggestions($event)">
       </app-mapping-zone>
     </div>
   </div>

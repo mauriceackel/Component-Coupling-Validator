@@ -27,6 +27,8 @@ export class MappingZoneComponent implements OnInit, OnChanges {
   @Input("mappingPairs") public mappingPairs = new Array<IMappingPair>();
   @Output("mapSame") public mapSame = new EventEmitter();
 
+  @Output("mappingAdded") public mappingAdded = new EventEmitter();
+
   public leftTreeControl = new NestedTreeControl<JsonTreeNode>(node => node.children);
   public leftDataSource = new MatTreeNestedDataSource<JsonTreeNode>();
 
@@ -65,20 +67,25 @@ export class MappingZoneComponent implements OnInit, OnChanges {
   }
 
   public async mapSelected() {
+    let mappingPair: IMappingPair;
     if (this.isPublish) {
-      this.mappingPairs.push({
+      mappingPair = {
         provided: this.selectedLeft.map(n => n.keyChain),
         required: this.selectedRight[0].keyChain,
         mappingCode: this.selectedLeft.length === 1 ? buildJSONataKey(this.selectedLeft[0].keyChain) : "",
-      });
+      };
     } else {
       const provided = this.selectedRight.length === 0 ? (Object.keys(this.rightData).length === 1 ? [[Object.keys(this.rightData)[0]]] : [[await this.openDialog()]]) : this.selectedRight.map(n => n.keyChain)
-      this.mappingPairs.push({
+      mappingPair = {
         provided,
         required: this.selectedLeft[0].keyChain,
         mappingCode: this.selectedRight.length === 1 ? buildJSONataKey(this.selectedRight[0].keyChain) : "",
-      });
+      };
     }
+
+    this.mappingPairs.push(mappingPair);
+    this.mappingAdded.emit(mappingPair);
+
     this.selectedLeft = new Array<JsonTreeNode>();
     this.selectedRight = new Array<JsonTreeNode>();
   }

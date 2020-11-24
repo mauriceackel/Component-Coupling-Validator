@@ -19,6 +19,8 @@ import { AdapterService, AdapterType } from '~/app/services/adapter.service';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ProgressIndicatorComponent } from '~/app/components/progress-indicator/progress-indicator.component';
+import { AttributeMappingService } from '~/app/services/attribute-mapping.service';
+import { flatten } from 'flat';
 
 @Component({
   selector: 'app-asyncapi-transformation',
@@ -59,6 +61,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
   constructor(
     private apiService: ApiService,
     private mappingService: MappingService,
+    private attributeMappingService: AttributeMappingService,
     private adapterService: AdapterService,
     private validationService: ValidationService,
     private dialog: MatDialog,
@@ -212,12 +215,15 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
     this.showSpinner();
 
-    const direction = this.inputForm.get('publish').value ? MappingDirection.OUTPUT : MappingDirection.INPUT;
+    // TODO Reenable
+    // const direction = this.inputForm.get('publish').value ? MappingDirection.OUTPUT : MappingDirection.INPUT;
 
-    const message = await this.mappingService.buildAsyncApiMappingPairs(this.parseSource(), this.parseTargets(), direction);
+    // const message = await this.mappingService.buildAsyncApiMappingPairs(this.parseSource(), this.parseTargets(), direction);
 
-    this.mappingPairs.splice(0);
-    this.mappingPairs.push(...message);
+    // this.mappingPairs.splice(0);
+    // this.mappingPairs.push(...message);
+
+    this.mappingPairs.push(...await this.getAllAttributeSuggestions());
 
     this.stopSpinner();
   }
@@ -284,6 +290,97 @@ export class TransformationComponent implements OnInit, OnDestroy {
     }
   }
 
+  public async getAllAttributeSuggestions() {
+    const result: IMappingPair[] = [];
+    const publish = this.inputForm.get('publish').value;
+
+    let attributes: any;
+    if (publish) {
+      const source = this.parseSource();
+
+      const response = {
+        [`${source.api.id}_${source.operationId}`]: await getMessageSchema(source.api, { operationId: source.operationId })
+      };
+
+      attributes = Object.keys(flatten(response));
+    } else {
+      const targets = this.parseTargets();
+      const request = {};
+
+      for (const [key, value] of Object.entries(targets || {})) {
+        request[key] = await getMessageSchema(value.api, { operationId: value.operationId })
+      }
+
+      attributes = Object.keys(flatten(request));
+    }
+
+    for (const attributeId of attributes) {
+      const component = await this.attributeMappingService.getComponentLocal(attributeId, this.mappingPairs);
+
+      let relevant: string[];
+      if (publish) {
+        const targets = Object.keys(this.parseTargets());
+        relevant = component.filter(n => targets.some(t => n.startsWith(t)) && !this.mappingPairs.some(m => m.required.join('.') === n));
+      } else {
+        const source = this.parseSource();
+        const condition = `${source.api}_${source.operationId}`;
+        relevant = component.filter(n => n.startsWith(condition) && !this.mappingPairs.some(m => m.required.join('.') === n));
+      }
+
+      const suggestedMappingPairs = (await Promise.all(relevant
+        .map(async (node) => {
+          return [node, await this.attributeMappingService.getMappingLocal(attributeId, node, this.mappingPairs)];
+        })))
+        .map(([node, transformation]) => {
+          const mappingPair: IMappingPair = {
+            provided: [attributeId.split('.')],
+            required: node.split('.'),
+            mappingCode: transformation
+          }
+          return mappingPair;
+        });
+
+      result.push(...suggestedMappingPairs);
+    }
+
+    return result;
+  }
+
+  public async getAttributeSuggestions(mappingPair: IMappingPair) {
+    if (!this.attributeMappingService.validateMapping(mappingPair)) {
+      return;
+    }
+
+    const publish = this.inputForm.get('publish').value;
+    const attributeId = mappingPair.provided[0].join('.');
+    const component = await this.attributeMappingService.getComponentLocal(attributeId, this.mappingPairs);
+
+    let relevant: string[];
+    if (publish) {
+      const targets = Object.keys(this.parseTargets());
+      relevant = component.filter(n => targets.some(t => n.startsWith(t)) && !this.mappingPairs.some(m => m.required.join('.') === n));
+    } else {
+      const source = this.parseSource();
+      const condition = `${source.api}_${source.operationId}`;
+      relevant = component.filter(n => n.startsWith(condition) && !this.mappingPairs.some(m => m.required.join('.') === n));
+    }
+
+    const suggestedMappingPairs = (await Promise.all(relevant
+      .map(async (node) => {
+        return [node, await this.attributeMappingService.getMappingLocal(attributeId, node, this.mappingPairs)];
+      })))
+      .map(([node, transformation]) => {
+        const mappingPair: IMappingPair = {
+          provided: [attributeId.split('.')],
+          required: node.split('.'),
+          mappingCode: transformation
+        }
+        return mappingPair;
+      });
+
+    this.mappingPairs.push(...suggestedMappingPairs);
+  }
+
   public async finishMapping() {
     try {
       if (this.mappingPairs.some(mp => !mp.mappingCode)) {
@@ -294,6 +391,13 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
       const source = this.parseSource();
       const targets = this.parseTargets();
+
+      //Store attribute mappings here
+      const mappingPairs = this.mappingPairs.filter(mp => this.attributeMappingService.validateMapping(mp));
+      for (const m of mappingPairs) {
+        await this.attributeMappingService.addMapping(m.provided[0].join('.'), m.required.join('.'), m.mappingCode)
+      }
+
       const mapping = this.mappingService.buildAsyncApiMapping(source, targets, this.mappingPairs, direction, MappingType.TRANSFORMATION);
 
       await this.validationService.validateAsyncApiMappingComplete(source, targets, mapping, direction);

@@ -122,14 +122,14 @@
         <mat-tab label="Request">
           <div class="p-4">
             <app-mapping-zone [isRequest]="true" leftHeading="Source Request Body" rightHeading="Target Request Body"
-              [leftData]="sourceRequestBody" [rightData]="targetRequestBodies" [mappingPairs]="requestMappingPairs" (mapSame)="mapSame(true)">
+              [leftData]="sourceRequestBody" [rightData]="targetRequestBodies" [mappingPairs]="requestMappingPairs" (mapSame)="mapSame(true)" (mappingAdded)="getAttributeSuggestions($event, true)">
             </app-mapping-zone>
           </div>
         </mat-tab>
         <mat-tab label="Response">
           <div class="p-4">
             <app-mapping-zone [isRequest]="false" leftHeading="Source Response Body" rightHeading="Target Response Body"
-              [leftData]="sourceResponseBody" [rightData]="targetResponseBodies" [mappingPairs]="responseMappingPairs" (mapSame)="mapSame(false)">
+              [leftData]="sourceResponseBody" [rightData]="targetResponseBodies" [mappingPairs]="responseMappingPairs" (mapSame)="mapSame(false)" (mappingAdded)="getAttributeSuggestions($event, false)">
             </app-mapping-zone>
           </div>
         </mat-tab>

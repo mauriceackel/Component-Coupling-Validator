@@ -49,6 +49,13 @@ service cloud.firestore {
       allow delete: if isAdmin() || matchesAuthId(resource.data.createdBy);
     }
 
+    match /attributeNodes/{attributeId} {
+      // Everyone can read the mapping descriptions
+      allow get, list: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
     match /tasks/{taskId} {
       // Everyone can read the tasks
       allow get, list: if isAuthenticated();
