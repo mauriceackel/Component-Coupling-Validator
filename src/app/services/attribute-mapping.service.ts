@@ -79,12 +79,19 @@ export class AttributeMappingService {
   }
 
   async getMapping(sourceId: string, targetId: string): Promise<string> {
+    if (sourceId === targetId) {
+      return sourceId;
+    }
     const path = await this.shortestPath(sourceId, targetId);
 
     return this.joinTransformations(path);
   }
 
   async getMappingLocal(sourceId: string, targetId: string, mappingPairs: IMappingPair[]): Promise<string> {
+    if (sourceId === targetId) {
+      return sourceId;
+    }
+
     const localKB = this.getLocalKB(mappingPairs);
 
     const path = await this.shortestPathLocal(sourceId, targetId, localKB);
@@ -148,7 +155,7 @@ export class AttributeMappingService {
 
       if (sourceNode.component.includes(targetNode.id!)) {
         console.log("Already exists");
-        return;
+        continue;
       }
 
       if (sourceNode.component.length > targetNode.component.length) {
@@ -213,6 +220,7 @@ export class AttributeMappingService {
 
   private joinTransformations(edges: MappingEdge[]): string {
     const [initialEdge, ...otherEdges] = edges;
+    if(initialEdge === undefined) return "";
     const joined = otherEdges.reduce((trans, e) => e.transformation.replace(new RegExp(`${e.source}`, 'g'), `(${trans})`), initialEdge.transformation);
     return joined;
   }
