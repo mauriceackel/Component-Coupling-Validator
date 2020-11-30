@@ -333,6 +333,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
         })))
         .map(([node, transformation]) => {
           const mappingPair: IMappingPair = {
+            creationType: MappingPairType.ATTRIBUTE,
             provided: [attributeId.split('.')],
             required: node.split('.'),
             mappingCode: transformation
@@ -371,6 +372,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
       })))
       .map(([node, transformation]) => {
         const mappingPair: IMappingPair = {
+          creationType: MappingPairType.ATTRIBUTE,
           provided: [attributeId.split('.')],
           required: node.split('.'),
           mappingCode: transformation

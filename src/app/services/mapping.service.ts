@@ -11,7 +11,7 @@ import createSha1Hash from '../utils/buildHash';
 import { ValidationService } from './validation.service';
 import { IAsyncApiMapping } from '../models/asyncapi-mapping.model';
 import { IAsyncApiInterface } from '../models/asyncapi-interface.model';
-import { IMappingPair, MappingType, MappingDirection, IMapping } from '../models/mapping.model';
+import { IMappingPair, MappingType, MappingDirection, IMapping, MappingPairType } from '../models/mapping.model';
 import { KeyChain } from './jsontree.service';
 
 type Tree = { node: ParsedOpenApiMapping | ParsedAsyncApiMapping, children?: Tree[] }
@@ -311,12 +311,14 @@ export class MappingService {
           if (mappingPairs.has(requiredKey)) {
             const existingPair = mappingPairs.get(requiredKey);
             mappingPair = {
+              creationType: MappingPairType.SYNTAX,
               mappingCode: "",
               provided: [...existingPair.provided, providedKey.split('.')],
               required: existingPair.required
             }
           } else {
             mappingPair = {
+              creationType: MappingPairType.SYNTAX,
               mappingCode: buildJSONataKey(providedKey.split('.')),
               provided: [providedKey.split('.')],
               required: requiredKey.split('.')
@@ -343,6 +345,7 @@ export class MappingService {
 
         if (unprefixedProvidedKey === unprefixedRequiredKey) {
           const mappingPair = {
+            creationType: MappingPairType.SYNTAX,
             mappingCode: buildJSONataKey(providedKey.split('.')),
             provided: [providedKey.split('.')],
             required: requiredKey.split('.')
@@ -606,6 +609,7 @@ export class MappingService {
         const inputs = getinputs(`{"${key}": ${transformation[key]}}`).getInputs({});
         const uniqueInputs = inputs.filter((k, i) => inputs.lastIndexOf(k) === i);
         const pair: IMappingPair = {
+          creationType: MappingPairType.MAPPING,
           provided: uniqueInputs.map(k => k.split('.')),
           required: [...keyChain, key],
           mappingCode: transformation[key]

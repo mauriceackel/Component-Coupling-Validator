@@ -9,9 +9,14 @@ export interface IMapping {
 }
 
 export interface IMappingPair {
+  creationType: MappingPairType
   provided: KeyChain[]
   required: KeyChain
   mappingCode: string
+}
+
+export enum MappingPairType {
+  MANUAL, ATTRIBUTE, MAPPING, SYNTAX
 }
 
 export enum MappingType {

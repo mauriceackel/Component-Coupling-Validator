@@ -53,7 +53,7 @@
     <div class="col-6">
       <div class="mapping-container">
         <div (click)="openEditor(pair)" class="d-flex flex-wrap cursor-pointer mapping-pair m-2"
-          [ngClass]="{'invalid': !pair.mappingCode}" *ngFor="let pair of mappingPairs">
+          [ngClass]="{'invalid': !pair.mappingCode, 'manual': pair.creationType === 0, 'attribute': pair.creationType === 1, 'mapping': pair.creationType === 2, 'syntax': pair.creationType === 3}" *ngFor="let pair of mappingPairs">
           <mat-icon class="remove-icon" (click)="removePair(pair)">
             remove_circle_outline
           </mat-icon>
