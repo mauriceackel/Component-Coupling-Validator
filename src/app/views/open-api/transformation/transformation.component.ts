@@ -7,7 +7,7 @@ import { merge, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { IOpenApi } from '~/app/models/openapi.model';
 import { IOpenApiInterface } from '~/app/models/openapi-interface.model';
-import { IMappingPair, MappingType } from '~/app/models/mapping.model';
+import { IMappingPair, MappingPairType, MappingType } from '~/app/models/mapping.model';
 import { ApiService } from '~/app/services/api.service';
 import { MappingService } from '~/app/services/mapping.service';
 import { TaskService } from '~/app/services/task.service';
@@ -200,20 +200,20 @@ export class TransformationComponent implements OnInit, OnDestroy {
   private async initializeMapping() {
     if (!this.inputForm.valid) return;
 
+    this.showSpinner();
+
+    const { request, response } = await this.mappingService.buildOpenApiMappingPairs(this.parseSource(), this.parseTargets());
+
+    this.requestMappingPairs.splice(0);
+    this.requestMappingPairs.push(...request);
+
+    this.responseMappingPairs.splice(0);
+    this.responseMappingPairs.push(...response);
+
     this.requestMappingPairs.push(...await this.getAllAttributeSuggestions(true));
     this.responseMappingPairs.push(...await this.getAllAttributeSuggestions(false));
-    // TODO Reenable
-    // this.showSpinner();
 
-    // const { request, response } = await this.mappingService.buildOpenApiMappingPairs(this.parseSource(), this.parseTargets());
-
-    // this.requestMappingPairs.splice(0);
-    // this.requestMappingPairs.push(...request);
-
-    // this.responseMappingPairs.splice(0);
-    // this.responseMappingPairs.push(...response);
-
-    // this.stopSpinner();
+    this.stopSpinner();
   }
 
   mapSame(request: boolean) {

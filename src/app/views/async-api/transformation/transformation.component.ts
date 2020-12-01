@@ -7,7 +7,7 @@ import { merge, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { IAsyncApi } from '~/app/models/asyncapi.model';
 import { IAsyncApiInterface } from '~/app/models/asyncapi-interface.model';
-import { IMappingPair, MappingType, MappingDirection } from '~/app/models/mapping.model';
+import { IMappingPair, MappingType, MappingDirection, MappingPairType } from '~/app/models/mapping.model';
 import { ApiService } from '~/app/services/api.service';
 import { MappingService } from '~/app/services/mapping.service';
 import { TaskService } from '~/app/services/task.service';
@@ -215,13 +215,12 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
     this.showSpinner();
 
-    // TODO Reenable
-    // const direction = this.inputForm.get('publish').value ? MappingDirection.OUTPUT : MappingDirection.INPUT;
+    const direction = this.inputForm.get('publish').value ? MappingDirection.OUTPUT : MappingDirection.INPUT;
 
-    // const message = await this.mappingService.buildAsyncApiMappingPairs(this.parseSource(), this.parseTargets(), direction);
+    const message = await this.mappingService.buildAsyncApiMappingPairs(this.parseSource(), this.parseTargets(), direction);
 
-    // this.mappingPairs.splice(0);
-    // this.mappingPairs.push(...message);
+    this.mappingPairs.splice(0);
+    this.mappingPairs.push(...message);
 
     this.mappingPairs.push(...await this.getAllAttributeSuggestions());
 
