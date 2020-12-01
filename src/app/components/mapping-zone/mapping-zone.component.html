@@ -10,12 +10,21 @@
             same keys</button>
         </div>
         <div class="col d-flex justify-content-center">
-          <h3 class="font-weight-bold">Mapping Area</h3>
+          <h3 class="font-weight-bold mb-0">Mapping Area</h3>
         </div>
         <div class="col">
           <button mat-stroked-button color="primary" class="float-right btn-narrow" (click)="mapSelected()"
             [disabled]="isRequest && selectedRight.length === 0 || !isRequest && selectedLeft.length === 0">Map
             selected</button>
+        </div>
+      </div>
+      <div class="row small my-1">
+        <div class="col d-flex align-items-center">
+          <div class="font-weight-bold mr-2">Key:</div>
+          <div class="px-1 mr-1 rounded invalid text-white">Invalid</div>
+          <div class="px-1 mr-1 rounded manual text-white">Manual</div>
+          <div class="px-1 mr-1 rounded attribute text-white">Automated (Attribute)</div>
+          <div class="px-1 mr-1 rounded mapping text-white">Automated (Mapping)</div>
         </div>
       </div>
     </div>
@@ -53,7 +62,8 @@
     <div class="col-6">
       <div class="mapping-container">
         <div (click)="openEditor(pair)" class="d-flex flex-wrap cursor-pointer mapping-pair m-2"
-          [ngClass]="{'invalid': !pair.mappingCode, 'manual': pair.creationType === 0, 'attribute': pair.creationType === 1, 'mapping': pair.creationType === 2, 'syntax': pair.creationType === 3}" *ngFor="let pair of mappingPairs">
+          [ngClass]="{'invalid': !pair.mappingCode, 'manual': pair.creationType === 0, 'attribute': pair.creationType === 1, 'mapping': pair.creationType === 2, 'syntax': pair.creationType === 3}"
+          *ngFor="let pair of mappingPairs">
           <mat-icon class="remove-icon" (click)="removePair(pair)">
             remove_circle_outline
           </mat-icon>

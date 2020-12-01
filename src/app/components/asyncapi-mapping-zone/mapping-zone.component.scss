@@ -23,7 +23,7 @@
   border-radius: 5px;
   position: relative;
 
-  background-color: mat-color($app-primary, 500) !important;
+  background-color: mat-color($app-primary, 500);
   color: mat-contrast($app-primary, 700) !important;
 
   display: flex;
@@ -36,21 +36,19 @@
 }
 
 .manual {
-  background-color: #20639B !important;
+  background-color: mat-color($app-primary, 500);
 }
 
 .attribute {
-  background-color: #3CAEA3 !important;
-  color: black;
+  background-color: #3CAEA3;
 }
 
 .mapping {
-  background-color: #F6D55C !important;
-  color: black;
+  background-color: #621940;
 }
 
 .syntax {
-  background-color: #621940 !important;
+  background-color: #F6D55C;
 }
 
 .remove-icon {
