@@ -152,7 +152,8 @@ function flattenSchema(schema: any) {
 
 export interface IAsyncApiOperationTemplate {
   operationId: string,
-  url: string
+  url: string,
+  priority?: boolean
 }
 
 export interface IAsyncApiOperation {

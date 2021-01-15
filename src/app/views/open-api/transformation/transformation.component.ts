@@ -100,20 +100,27 @@ export class TransformationComponent implements OnInit, OnDestroy {
       const source = this.parseSource();
       this.mappingSource = source;
 
-      if (source) {
-        this.sourceRequestBody = {
-          [`${source.api.id}_${source.operationId}_${source.responseId}`]: await getRequestSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
-        };
-        this.sourceResponseBody = {
-          [`${source.api.id}_${source.operationId}_${source.responseId}`]: await getResponseSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
-        };
+      if (!source) {
+        return;
       }
+
+      this.sourceRequestBody = {
+        [`${source.api.id}_${source.operationId}_${source.responseId}`]: await getRequestSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
+      };
+      this.sourceResponseBody = {
+        [`${source.api.id}_${source.operationId}_${source.responseId}`]: await getResponseSchema(source.api, { operationId: source.operationId, responseId: source.responseId })
+      };
+
+      //Get operation suggestions for target(s)
+      this.getOperationSuggestions();
     }));
     this.subscriptions.push(this.inputForm.get('mS').valueChanges.subscribe(async (val: IOpenApi) => this.sourceOperations = val && await getOperationTemplates(val)));
 
     this.subscriptions.push(this.targets.valueChanges.subscribe(async () => {
       const targets = this.parseTargets();
       this.mappingTargets = targets;
+      //Get operation suggestions for target(s)
+      this.getOperationSuggestions();
 
       const request = {};
       const response = {};
@@ -214,6 +221,50 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.responseMappingPairs.push(...await this.getAllAttributeSuggestions(false));
 
     this.stopSpinner();
+  }
+
+  private async getOperationSuggestions() {
+    if (!this.mappingSource || this.targets.valid) {
+      return;
+    }
+
+    //Get operation suggestions for target(s)
+    const targets = this.targets.value as Array<{ mT: IOpenApi }>;
+    const targetIds = targets.reduce((arr, target) => target?.mT ? ([...arr, target.mT.id]) : arr, [])
+    const predictions = await this.mappingService.buildOpenApiOperationPredictions(this.mappingSource, targetIds);
+
+    type Prediction = {
+      apiId: string;
+      operationId: string;
+      responseId: string;
+    }
+
+    const predictionsByTargets = predictions.reduce<{ [key: string]: Prediction[] }>((obj, pred) => ({
+      ...obj,
+      [pred.apiId]: [...(obj[pred.apiId] || []), pred]
+    }), {});
+
+    for (const [apiId, apiPredictions] of Object.entries(predictionsByTargets)) {
+      for(const target of this.targets.controls) {
+        if(target.get('mT').value?.id !== apiId) {
+          continue;
+        }
+
+        const operationIds = apiPredictions.map(p => p.operationId);
+        const operations: IOpenApiOperationTemplate[] = target.get('operations').value;
+
+        operations.forEach(op => {
+          op.priority = operationIds.includes(op.operationId);
+        });
+        operations.sort((a, b) => {
+          if(a.priority === b.priority) return 0;
+          if(a.priority) return -1;
+          return 1;
+        });
+      }
+    }
+
+    console.log(predictions)
   }
 
   mapSame(request: boolean) {

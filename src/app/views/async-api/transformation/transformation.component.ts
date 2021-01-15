@@ -94,11 +94,16 @@ export class TransformationComponent implements OnInit, OnDestroy {
       const source = this.parseSource();
       this.mappingSource = source;
 
-      if (source) {
-        this.sourceMessageBody = {
-          [`${source.api.id}_${source.operationId}`]: await getMessageSchema(source.api, { operationId: source.operationId })
-        };
+      if (!source) {
+        return;
       }
+
+      this.sourceMessageBody = {
+        [`${source.api.id}_${source.operationId}`]: await getMessageSchema(source.api, { operationId: source.operationId })
+      };
+
+      //Get operation suggestions for target(s)
+      this.getOperationSuggestions();
     }));
     this.subscriptions.push(this.inputForm.get('mS').valueChanges.subscribe(async (val: IAsyncApi) => {
       const { servers, operationTemplates } = val && await getOperationTemplates(val, this.inputForm.get('publish').value);
@@ -109,6 +114,9 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.subscriptions.push(this.targets.valueChanges.subscribe(async () => {
       const targets = this.parseTargets();
       this.mappingTargets = targets;
+
+      //Get operation suggestions for target(s)
+      this.getOperationSuggestions();
 
       const message = {};
 
@@ -225,6 +233,50 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.mappingPairs.push(...await this.getAllAttributeSuggestions());
 
     this.stopSpinner();
+  }
+
+  private async getOperationSuggestions() {
+    if (!this.mappingSource || this.targets.valid) {
+      return;
+    }
+
+    //Get operation suggestions for target(s)
+    const targets = this.targets.value as Array<{ mT: IAsyncApi }>;
+    const targetIds = targets.reduce((arr, target) => target?.mT ? ([...arr, target.mT.id]) : arr, [])
+    const direction = this.inputForm.get('publish').value ? MappingDirection.OUTPUT : MappingDirection.INPUT;
+    const predictions = await this.mappingService.buildAsyncApiOperationPredictions(this.mappingSource, targetIds, direction);
+
+    type Prediction = {
+      apiId: string;
+      operationId: string;
+    }
+
+    const predictionsByTargets = predictions.reduce<{ [key: string]: Prediction[] }>((obj, pred) => ({
+      ...obj,
+      [pred.apiId]: [...(obj[pred.apiId] || []), pred]
+    }), {});
+
+    for (const [apiId, apiPredictions] of Object.entries(predictionsByTargets)) {
+      for (const target of this.targets.controls) {
+        if (target.get('mT').value?.id !== apiId) {
+          continue;
+        }
+
+        const operationIds = apiPredictions.map(p => p.operationId);
+        const operations: IAsyncApiOperationTemplate[] = target.get('operations').value;
+
+        operations.forEach(op => {
+          op.priority = operationIds.includes(op.operationId);
+        });
+        operations.sort((a, b) => {
+          if (a.priority === b.priority) return 0;
+          if (a.priority) return -1;
+          return 1;
+        });
+      }
+    }
+
+    console.log(predictions)
   }
 
   mapSame() {

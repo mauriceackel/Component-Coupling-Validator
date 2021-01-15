@@ -110,6 +110,7 @@
                     <mat-label>Operation</mat-label>
                     <mat-select [disabled]="inputForm.valid" [formControl]="group.get('mTO')">
                       <mat-option *ngFor="let operation of group.get('operations').value" [value]="operation">
+                        <span *ngIf="operation.priority">*</span>
                         {{operation.operationId}}
                       </mat-option>
                     </mat-select>

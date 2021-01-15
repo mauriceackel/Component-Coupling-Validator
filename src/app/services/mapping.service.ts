@@ -566,7 +566,7 @@ export class MappingService {
    * @param mappings A list of all existing mappings
    * @param visitedApis A list of APIs (i.e. vertices) that were already visited
    */
-  private treeSearch(sourceId: string, finalTragetId: string, mappings: { [key: string]: (ParsedOpenApiMapping | ParsedAsyncApiMapping)[] }, visitedApis: Array<string> = []): Tree[] {
+  private treeSearch(sourceId: string, finalTragetId: string, mappings: { [key: string]: (ParsedOpenApiMapping | ParsedAsyncApiMapping)[] }, exactMatch: boolean = true, visitedApis: Array<string> = []): Tree[] {
     //From all mappings, get the ones that match the source ID and that have not yet been visited
     const sources = mappings[sourceId] || [];
 
@@ -577,12 +577,12 @@ export class MappingService {
       for (let j = 0; j < source.targetIds.length; j++) {
         const targetId = source.targetIds[j];
 
-        if (targetId === finalTragetId) {
+        if (targetId === finalTragetId || (!exactMatch && targetId.startsWith(finalTragetId))) {
           //If one target ID matches our final target API, we add the mapping without any children to the tree
           result.push({ node: source });
         } else if (!(visitedApis.includes(targetId) || sourceId === targetId)) {
           //If the target ID does not yet match the final target, we execute the recursion step, resulting in a DFS
-          const children = this.treeSearch(targetId, finalTragetId, mappings, [...visitedApis, sourceId]);
+          const children = this.treeSearch(targetId, finalTragetId, mappings, exactMatch, [...visitedApis, sourceId]);
           //We only add a node to the final tree, if we have found any children that lead to the target. If not, we ignore this branch.
           //This makes it so that in the final tree all leafs end in the target API
           if (children.length > 0) {
@@ -593,6 +593,105 @@ export class MappingService {
     }
 
     return result;
+  }
+
+  /**
+   * Get predictions for operations of target interface(s)
+   */
+  public async buildOpenApiOperationPredictions(source: IOpenApiInterface, targetApiIds: string[]): Promise<Array<{ apiId: string, operationId: string, responseId: string }>> {
+    const sourceId = `${source.api.id}_${source.operationId}_${source.responseId}`;
+
+    const mappings: { [key: string]: ParsedOpenApiMapping[] } = (await this.getOpenApiMappings()).reduce((obj, m) => {
+      const parsedMapping: ParsedOpenApiMapping = {
+        ...m,
+        requestMapping: {},
+        requestMappingInputKeys: {},
+        responseMapping: {},
+        responseMappingInputKeys: {}
+      };
+
+      return {
+        ...obj,
+        [parsedMapping.sourceId]: [...(obj[parsedMapping.sourceId] || []), parsedMapping]
+      }
+    }, {});
+
+    const mappingTrees: OpenApiTree[] = [];
+    for (let i = 0; i < targetApiIds.length; i++) {
+      const result = this.treeSearch(sourceId, targetApiIds[i], mappings, false) as OpenApiTree[];
+      mappingTrees.push(...result);
+    }
+    mappingTrees.forEach(t => console.log(t))
+
+    const operations: { apiId: string, operationId: string, responseId: string }[] = [];
+    while (mappingTrees.length > 0) {
+      const tree = mappingTrees.shift();
+      if (tree.children) {
+        mappingTrees.push(...tree.children);
+        continue;
+      }
+
+      const ops = tree.node.targetIds.reduce<{ apiId: string, operationId: string, responseId: string }[]>((arr, tId) => {
+        const [apiId, operationId, responseId] = tId.split('_');
+        if (targetApiIds.includes(apiId)) {
+          arr.push({ apiId, operationId, responseId });
+        }
+
+        return arr;
+      }, []);
+
+      operations.push(...ops)
+    }
+
+    return operations;
+  }
+
+  /**
+   * Get predictions for operations of target interface(s)
+   */
+  public async buildAsyncApiOperationPredictions(source: IAsyncApiInterface, targetApiIds: string[], direction: MappingDirection): Promise<Array<{ apiId: string, operationId: string }>> {
+    const sourceId = `${source.api.id}_${source.operationId}`;
+
+    const mappings: { [key: string]: ParsedAsyncApiMapping[] } = (await this.getAsyncApiMappings({ direction })).reduce((obj, m) => {
+      const parsedMapping: ParsedAsyncApiMapping = {
+        ...m,
+        messageMappings: {},
+        messageMappingsInputKeys: {}
+      };
+
+      return {
+        ...obj,
+        [parsedMapping.sourceId]: [...(obj[parsedMapping.sourceId] || []), parsedMapping]
+      }
+    }, {});
+
+    const mappingTrees: AsyncApiTree[] = [];
+    for (let i = 0; i < targetApiIds.length; i++) {
+      const result = this.treeSearch(sourceId, targetApiIds[i], mappings, false) as AsyncApiTree[];
+      mappingTrees.push(...result);
+    }
+
+    const operations: { apiId: string, operationId: string }[] = [];
+    while (mappingTrees.length > 0) {
+      const tree = mappingTrees.shift();
+      if (tree.children) {
+        mappingTrees.push(...tree.children);
+        continue;
+      }
+
+      const ops = tree.node.targetIds.reduce<{ apiId: string, operationId: string }[]>((arr, tId) => {
+        const [apiId, operationId] = tId.split('_');
+        if (targetApiIds.includes(apiId)) {
+          arr.push({ apiId, operationId });
+        }
+
+        return arr;
+      }, []);
+
+      operations.push(...ops)
+    }
+
+    return operations;
   }
 
   /**

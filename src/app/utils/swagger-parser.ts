@@ -221,6 +221,7 @@ function flattenSchema(schema: any) {
 export interface IOpenApiOperationTemplate {
   operationId: string,
   responseIds: Array<string>
+  priority?: boolean
 }
 
 export interface IOpenApiOperation {
