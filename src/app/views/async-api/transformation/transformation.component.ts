@@ -21,6 +21,7 @@ import { ComponentPortal } from '@angular/cdk/portal';
 import { ProgressIndicatorComponent } from '~/app/components/progress-indicator/progress-indicator.component';
 import { AttributeMappingService } from '~/app/services/attribute-mapping.service';
 import { flatten } from 'flat';
+import { arrayEquals } from '~/app/utils/array-utils';
 
 @Component({
   selector: 'app-asyncapi-transformation',
@@ -52,7 +53,11 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
   public mappingPairs: Array<IMappingPair>;
 
+  public automaticMappingPairs: Array<IMappingPair>;
+
   public mappingError: AsyncApiValidationError;
+
+  public strict: boolean = true;
 
   private subscriptions: Array<Subscription>;
 
@@ -218,6 +223,30 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.spinnerRef.detach();
   }
 
+  changeStrictMode(strict: boolean) {
+    this.strict = strict;
+
+    if (!strict) {
+      return;
+    }
+
+    for (const amP of this.automaticMappingPairs) {
+      // If there were manual mappings added for existing automatic ones, replace them
+      const idx = this.mappingPairs.findIndex(mP => arrayEquals(amP.required, mP.required))
+      if (idx !== -1) {
+        this.mappingPairs[idx] = amP;
+      }
+
+      // If there were automatic mappings removed, add them again
+      if (!this.mappingPairs.includes(amP)) {
+        this.mappingPairs.push(amP);
+      }
+    }
+    // Remove potential automatically added mappings (i.e. atrtibute mappings)
+    this.mappingPairs = this.mappingPairs.filter(mP => mP.creationType === MappingPairType.MANUAL || this.automaticMappingPairs.includes(mP));
+
+  }
+
   private async initializeMapping() {
     if (!this.inputForm.valid) return;
 
@@ -231,6 +260,8 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.mappingPairs.push(...message);
 
     this.mappingPairs.push(...await this.getAllAttributeSuggestions());
+
+    this.automaticMappingPairs = new Array(...this.mappingPairs);
 
     this.stopSpinner();
   }
@@ -435,6 +466,10 @@ export class TransformationComponent implements OnInit, OnDestroy {
   }
 
   public async finishMapping() {
+    if (!this.strict) {
+      return;
+    }
+
     try {
       if (this.mappingPairs.some(mp => !mp.mappingCode)) {
         throw new OpenApiValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")

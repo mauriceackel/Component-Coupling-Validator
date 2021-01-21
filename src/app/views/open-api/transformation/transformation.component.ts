@@ -21,6 +21,7 @@ import { ComponentPortal } from '@angular/cdk/portal';
 import { ProgressIndicatorComponent } from '~/app/components/progress-indicator/progress-indicator.component';
 import { AttributeMappingService } from '~/app/services/attribute-mapping.service';
 import { flatten } from 'flat';
+import { arrayEquals } from '~/app/utils/array-utils';
 
 @Component({
   selector: 'app-openapi-transformation',
@@ -54,7 +55,12 @@ export class TransformationComponent implements OnInit, OnDestroy {
   public requestMappingPairs: Array<IMappingPair>;
   public responseMappingPairs: Array<IMappingPair>;
 
+  public automaticRequestMappingPairs: Array<IMappingPair>;
+  public automaticResponseMappingPairs: Array<IMappingPair>;
+
   public mappingError: OpenApiValidationError;
+
+  public strict: boolean = true;
 
   private subscriptions: Array<Subscription>;
 
@@ -204,6 +210,42 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.spinnerRef.detach();
   }
 
+  changeStrictMode(strict: boolean) {
+    this.strict = strict;
+
+    if(!strict) {
+      return;
+    }
+
+    for (const amP of this.automaticRequestMappingPairs) {
+      // If there were manual mappings added for existing automatic ones, replace them
+      const idx = this.requestMappingPairs.findIndex(mP => arrayEquals(amP.required, mP.required))
+      if(idx !== -1) {
+        this.requestMappingPairs[idx] = amP;
+      }
+
+      // If there were automatic mappings removed, add them again
+      if(!this.requestMappingPairs.includes(amP)) {
+        this.requestMappingPairs.push(amP);
+      }
+    }
+    // Remove potential automatically added mappings (i.e. atrtibute mappings)
+    this.requestMappingPairs = this.requestMappingPairs.filter(mP => mP.creationType === MappingPairType.MANUAL || this.automaticRequestMappingPairs.includes(mP));
+
+    for (const amP of this.automaticResponseMappingPairs) {
+      const idx = this.responseMappingPairs.findIndex(mP => arrayEquals(amP.required, mP.required))
+      if(idx !== -1) {
+        this.responseMappingPairs[idx] = amP;
+      }
+
+      if(!this.responseMappingPairs.includes(amP)) {
+        this.responseMappingPairs.push(amP);
+      }
+    }
+    // Remove potential automatically added mappings (i.e. atrtibute mappings)
+    this.responseMappingPairs = this.responseMappingPairs.filter(mP => mP.creationType === MappingPairType.MANUAL || this.automaticResponseMappingPairs.includes(mP));
+  }
+
   private async initializeMapping() {
     if (!this.inputForm.valid) return;
 
@@ -220,6 +262,8 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.requestMappingPairs.push(...await this.getAllAttributeSuggestions(true));
     this.responseMappingPairs.push(...await this.getAllAttributeSuggestions(false));
 
+    this.automaticRequestMappingPairs = new Array(...this.requestMappingPairs);
+    this.automaticResponseMappingPairs = new Array(...this.responseMappingPairs);
     this.stopSpinner();
   }
 
@@ -425,6 +469,10 @@ export class TransformationComponent implements OnInit, OnDestroy {
   }
 
   public async finishMapping() {
+    if(!this.strict) {
+      return;
+    }
+
     try {
       if ([...this.requestMappingPairs, ...this.responseMappingPairs].some(mp => !mp.mappingCode)) {
         throw new OpenApiValidationError("Please enter a mapping code for the mappings marked in red (by clicking on it)")

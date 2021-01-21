@@ -130,7 +130,7 @@
     <div class="col p-4">
       <app-mapping-zone [isPublish]="inputForm.get('publish').value" leftHeading="Source Message Body" rightHeading="Target Message Body"
         [leftData]="sourceMessageBody" [rightData]="targetMessageBodies" [mappingPairs]="mappingPairs"
-        (mapSame)="mapSame()" (mappingAdded)="getAttributeSuggestions($event)">
+        (mapSame)="mapSame()" (mappingAdded)="getAttributeSuggestions($event)" [strict]="strict">
       </app-mapping-zone>
     </div>
   </div>
@@ -156,12 +156,17 @@
   </div> -->
 
   <div class="row mt-5">
-    <div class="col">
+    <div class="col d-flex align-items-center">
       <button mat-raised-button color="warn" [disabled]="!inputForm.valid" (click)="reset()">Reset</button>
-      <button mat-raised-button color="accent" class="float-right" [disabled]="!inputForm.valid"
-        (click)="finishMapping()">Finish Mapping</button>
-      <button mat-raised-button color="accent" class="float-right mr-2" [disabled]="!inputForm.valid"
+      <div class="d-flex ml-1">
+        <mat-slide-toggle [ngModel]="strict" (ngModelChange)="changeStrictMode($event)"></mat-slide-toggle>
+        <span class="ml-3">Strict mode{{ strict ? ' on' : ' off' }}</span>
+      </div>
+      <div style="flex-grow: 1;"></div>
+      <button mat-raised-button color="accent" class="mr-1" [disabled]="!inputForm.valid"
         (click)="buildAdapter()">Build Adapter</button>
+      <button mat-raised-button color="accent" class="" [disabled]="!strict || !inputForm.valid"
+        (click)="finishMapping()">Finish Mapping</button>
     </div>
   </div>
   <div class="mt-2" *ngIf="mappingError">
