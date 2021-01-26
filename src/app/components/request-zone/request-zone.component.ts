@@ -69,7 +69,11 @@ export class RequestZoneComponent implements OnInit, OnChanges {
         this.mappingError = err;
         return;
       }
-      throw err;
+
+      console.log(err)
+      this.outputData = {};
+      const message = `An error eccured during your request: ${err.message}.` + (err.value ? ` Received value: ${JSON.stringify(err.value)}` : '');
+      this.mappingError = new OpenApiValidationError(message);
     }
   }
 
