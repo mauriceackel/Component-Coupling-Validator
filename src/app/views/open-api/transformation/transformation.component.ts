@@ -21,6 +21,7 @@ import { ComponentPortal } from '@angular/cdk/portal';
 import { ProgressIndicatorComponent } from '~/app/components/progress-indicator/progress-indicator.component';
 import { AttributeMappingService } from '~/app/services/attribute-mapping.service';
 import { flatten } from 'flat';
+import * as deepcopy from 'deepcopy';
 import { arrayEquals } from '~/app/utils/array-utils';
 
 @Component({
@@ -221,6 +222,7 @@ export class TransformationComponent implements OnInit, OnDestroy {
       // If there were manual mappings added for existing automatic ones, replace them
       const idx = this.requestMappingPairs.findIndex(mP => arrayEquals(amP.required, mP.required))
       if(idx !== -1) {
+        console.log("Replacing", this.requestMappingPairs[idx], "with", amP)
         this.requestMappingPairs[idx] = amP;
       }
 
@@ -262,8 +264,8 @@ export class TransformationComponent implements OnInit, OnDestroy {
     this.requestMappingPairs.push(...await this.getAllAttributeSuggestions(true));
     this.responseMappingPairs.push(...await this.getAllAttributeSuggestions(false));
 
-    this.automaticRequestMappingPairs = new Array(...this.requestMappingPairs);
-    this.automaticResponseMappingPairs = new Array(...this.responseMappingPairs);
+    this.automaticRequestMappingPairs = this.requestMappingPairs.map(mp => deepcopy(mp));
+    this.automaticResponseMappingPairs = this.responseMappingPairs.map(mp => deepcopy(mp));
     this.stopSpinner();
   }
 

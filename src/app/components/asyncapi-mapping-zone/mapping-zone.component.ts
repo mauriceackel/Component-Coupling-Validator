@@ -102,6 +102,7 @@ export class MappingZoneComponent implements OnInit, OnChanges {
       },
       width: "80%",
       data: {
+        strict: this.strict,
         mappingCode: mappingPair.mappingCode,
         keys: mappingPair.provided
       }

@@ -9,14 +9,16 @@ import { buildJSONataKey } from '~/app/services/mapping.service';
 export class TransformationDialog implements OnInit {
   public mappingCode: string;
   public keys: string[];
+  public strict: boolean;
 
   @ViewChild('mappingCodeArea') mappingCodeArea: ElementRef<HTMLTextAreaElement>
 
   constructor(
-    @Inject(MAT_DIALOG_DATA) public data: { mappingCode: string, keys: KeyChain[] },
+    @Inject(MAT_DIALOG_DATA) public data: { mappingCode: string, keys: KeyChain[], strict?: boolean },
     private dialogRef: MatDialogRef<TransformationDialog>
   ) {
     this.mappingCode = data.mappingCode;
+    this.strict = !!data.strict;
     this.keys = data.keys.map(kC => buildJSONataKey(kC))
   }
 

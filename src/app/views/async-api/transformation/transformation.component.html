@@ -7,6 +7,10 @@
         <mat-slide-toggle [disabled]="inputForm.valid" formControlName="publish"></mat-slide-toggle>
         <span class="ml-3">Publish</span>
       </div>
+      <div class="col d-flex justify-content-center">
+        <mat-slide-toggle formControlName="strict"></mat-slide-toggle>
+        <span class="ml-3">Strict mode{{ inputForm.get('strict').value ? ' on' : ' off' }}</span>
+      </div>
     </div>
 
     <div class="row">
@@ -128,9 +132,10 @@
 
   <div class="row">
     <div class="col p-4">
-      <app-mapping-zone [isPublish]="inputForm.get('publish').value" leftHeading="Source Message Body" rightHeading="Target Message Body"
-        [leftData]="sourceMessageBody" [rightData]="targetMessageBodies" [mappingPairs]="mappingPairs"
-        (mapSame)="mapSame()" (mappingAdded)="getAttributeSuggestions($event)" [strict]="strict">
+      <app-mapping-zone [isPublish]="inputForm.get('publish').value" leftHeading="Source Message Body"
+        rightHeading="Target Message Body" [leftData]="sourceMessageBody" [rightData]="targetMessageBodies"
+        [mappingPairs]="mappingPairs" (mapSame)="mapSame()" (mappingAdded)="getAttributeSuggestions($event)"
+        [strict]="inputForm.get('strict').value">
       </app-mapping-zone>
     </div>
   </div>
@@ -158,14 +163,10 @@
   <div class="row mt-5">
     <div class="col d-flex align-items-center">
       <button mat-raised-button color="warn" [disabled]="!inputForm.valid" (click)="reset()">Reset</button>
-      <div class="d-flex ml-1">
-        <mat-slide-toggle [ngModel]="strict" (ngModelChange)="changeStrictMode($event)"></mat-slide-toggle>
-        <span class="ml-3">Strict mode{{ strict ? ' on' : ' off' }}</span>
-      </div>
       <div style="flex-grow: 1;"></div>
-      <button mat-raised-button color="accent" class="mr-1" [disabled]="!inputForm.valid"
-        (click)="buildAdapter()">Build Adapter</button>
-      <button mat-raised-button color="accent" class="" [disabled]="!strict || !inputForm.valid"
+      <button mat-raised-button color="accent" class="mr-1" [disabled]="!inputForm.valid" (click)="buildAdapter()">Build
+        Adapter</button>
+      <button mat-raised-button color="accent" class="" [disabled]="!inputForm.get('strict').value || !inputForm.valid"
         (click)="finishMapping()">Finish Mapping</button>
     </div>
   </div>

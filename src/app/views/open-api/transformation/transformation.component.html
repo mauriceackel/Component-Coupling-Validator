@@ -1,4 +1,11 @@
 <ng-container>
+  <div class="row">
+    <div class="col d-flex justify-content-center">
+      <mat-slide-toggle [ngModel]="strict" (ngModelChange)="changeStrictMode($event)"></mat-slide-toggle>
+      <span class="ml-3">Strict mode{{ strict ? ' on' : ' off' }}</span>
+    </div>
+  </div>
+
   <form [formGroup]="inputForm">
     <div class="row">
       <div class="col">
@@ -100,8 +107,7 @@
                   <mat-form-field appearance="outline" class="flex-grow-1">
                     <mat-label>Response</mat-label>
                     <mat-select [disabled]="inputForm.valid" [formControl]="group.get('mTR')">
-                      <mat-option *ngFor="let responseId of group.value.mTO?.responseIds"
-                        [value]="responseId">
+                      <mat-option *ngFor="let responseId of group.value.mTO?.responseIds" [value]="responseId">
                         {{responseId}}
                       </mat-option>
                     </mat-select>
@@ -122,15 +128,19 @@
       <mat-tab-group mat-stretch-tabs>
         <mat-tab label="Request">
           <div class="p-4">
-            <app-mapping-zone [isRequest]="true" [strict]="strict" leftHeading="Source Request Body" rightHeading="Target Request Body"
-              [leftData]="sourceRequestBody" [rightData]="targetRequestBodies" [mappingPairs]="requestMappingPairs" (mapSame)="mapSame(true)" (mappingAdded)="getAttributeSuggestions($event, true)">
+            <app-mapping-zone [isRequest]="true" [strict]="strict" leftHeading="Source Request Body"
+              rightHeading="Target Request Body" [leftData]="sourceRequestBody" [rightData]="targetRequestBodies"
+              [mappingPairs]="requestMappingPairs" (mapSame)="mapSame(true)"
+              (mappingAdded)="getAttributeSuggestions($event, true)">
             </app-mapping-zone>
           </div>
         </mat-tab>
         <mat-tab label="Response">
           <div class="p-4">
-            <app-mapping-zone [isRequest]="false" [strict]="strict" leftHeading="Source Response Body" rightHeading="Target Response Body"
-              [leftData]="sourceResponseBody" [rightData]="targetResponseBodies" [mappingPairs]="responseMappingPairs" (mapSame)="mapSame(false)" (mappingAdded)="getAttributeSuggestions($event, false)">
+            <app-mapping-zone [isRequest]="false" [strict]="strict" leftHeading="Source Response Body"
+              rightHeading="Target Response Body" [leftData]="sourceResponseBody" [rightData]="targetResponseBodies"
+              [mappingPairs]="responseMappingPairs" (mapSame)="mapSame(false)"
+              (mappingAdded)="getAttributeSuggestions($event, false)">
             </app-mapping-zone>
           </div>
         </mat-tab>
@@ -146,13 +156,14 @@
               <b>Test Mapping</b>
             </mat-panel-title>
             <mat-panel-description>
-              {{(!inputForm.valid) ? "Select a source and target interface first" : "Expand this to test a request with your current mapping"}}
+              {{(!inputForm.valid) ? "Select a source and target interface first" : "Expand this to test a request with
+              your current mapping"}}
             </mat-panel-description>
           </mat-expansion-panel-header>
 
           <div class="pt-2">
-            <app-request-zone *ngIf="inputForm.valid" leftHeading="Input Data" rightHeading="Output Data" [inputData]="sourceRequestBody"
-              [mappingSource]="mappingSource" [mappingTargets]="mappingTargets"
+            <app-request-zone *ngIf="inputForm.valid" leftHeading="Input Data" rightHeading="Output Data"
+              [inputData]="sourceRequestBody" [mappingSource]="mappingSource" [mappingTargets]="mappingTargets"
               [requestMappingPairs]="requestMappingPairs" [responseMappingPairs]="responseMappingPairs">
             </app-request-zone>
           </div>
@@ -163,13 +174,9 @@
   <div class="row mt-5">
     <div class="col d-flex align-items-center">
       <button mat-raised-button color="warn" [disabled]="!inputForm.valid" (click)="reset()">Reset</button>
-      <div class="d-flex ml-1">
-        <mat-slide-toggle [ngModel]="strict" (ngModelChange)="changeStrictMode($event)"></mat-slide-toggle>
-        <span class="ml-3">Strict mode{{ strict ? ' on' : ' off' }}</span>
-      </div>
       <div style="flex-grow: 1;"></div>
-      <button mat-raised-button color="accent" class="mr-1" [disabled]="!inputForm.valid"
-        (click)="buildAdapter()">Build Adapter</button>
+      <button mat-raised-button color="accent" class="mr-1" [disabled]="!inputForm.valid" (click)="buildAdapter()">Build
+        Adapter</button>
       <button mat-raised-button color="accent" class="" [disabled]="!strict || !inputForm.valid"
         (click)="finishMapping()">Finish Mapping</button>
     </div>
