@@ -15,6 +15,8 @@ import { MappingService, buildJSONataKey } from '~/app/services/mapping.service'
 })
 export class MappingZoneComponent implements OnInit, OnChanges {
 
+  @Input("strict") public strict: boolean;
+
   @Input("isRequest") public isRequest: boolean;
 
   @Input("leftHeading") public leftHeading: string;
@@ -43,11 +45,11 @@ export class MappingZoneComponent implements OnInit, OnChanges {
   ) { }
 
   public ngOnInit() {
-    if (this.mappingPairs instanceof Array) {
-      this.mappingPairs.splice(0);
-    } else {
-      this.mappingPairs = new Array<IMappingPair>();
-    }
+    // if (this.mappingPairs instanceof Array) {
+    //   this.mappingPairs.splice(0);
+    // } else {
+    //   this.mappingPairs = new Array<IMappingPair>();
+    // }
 
     this.leftDataSource.data = this.jsonTreeService.toTree(this.leftData);
     this.leftTreeControl.dataNodes = this.leftDataSource.data;
@@ -96,6 +98,7 @@ export class MappingZoneComponent implements OnInit, OnChanges {
       },
       width: "80%",
       data: {
+        strict: this.strict,
         mappingCode: mappingPair.mappingCode,
         keys: mappingPair.provided
       }

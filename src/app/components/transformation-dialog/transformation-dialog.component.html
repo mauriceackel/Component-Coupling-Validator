@@ -5,16 +5,16 @@
       <div class="overflow-auto">
         <h3 class="mb-0">Available Keys</h3>
         <div class="d-flex flex-column p-1">
-          <button mat-button class="btn-overflow-left" (click)="insertKey(key)" *ngFor="let key of keys">{{key}}</button>
+          <button [disabled]="strict" mat-button class="btn-overflow-left" (click)="insertKey(key)" *ngFor="let key of keys">{{key}}</button>
         </div>
       </div>
     </div>
     <div class="col-9">
-      <textarea #mappingCodeArea class="w-100 h-100" [(ngModel)]="mappingCode"></textarea>
+      <textarea #mappingCodeArea class="w-100 h-100" [(ngModel)]="mappingCode" [disabled]="strict"></textarea>
     </div>
   </div>
 </div>
 <div mat-dialog-actions align="end">
   <button mat-button [mat-dialog-close]="undefined" color="warn">Cancel</button>
-  <button mat-button [mat-dialog-close]="mappingCode" color="primary">Save</button>
+  <button mat-button [mat-dialog-close]="mappingCode" color="primary" [disabled]="strict">Save</button>
 </div>

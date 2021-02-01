@@ -311,14 +311,14 @@ export class MappingService {
           if (mappingPairs.has(requiredKey)) {
             const existingPair = mappingPairs.get(requiredKey);
             mappingPair = {
-              creationType: MappingPairType.SYNTAX,
+              creationType: MappingPairType.MANUAL, //SYNTAX
               mappingCode: "",
               provided: [...existingPair.provided, providedKey.split('.')],
               required: existingPair.required
             }
           } else {
             mappingPair = {
-              creationType: MappingPairType.SYNTAX,
+              creationType: MappingPairType.MANUAL, //SYNTAX
               mappingCode: buildJSONataKey(providedKey.split('.')),
               provided: [providedKey.split('.')],
               required: requiredKey.split('.')
@@ -345,7 +345,7 @@ export class MappingService {
 
         if (unprefixedProvidedKey === unprefixedRequiredKey) {
           const mappingPair = {
-            creationType: MappingPairType.SYNTAX,
+            creationType: MappingPairType.MANUAL, //SYNTAX
             mappingCode: buildJSONataKey(providedKey.split('.')),
             provided: [providedKey.split('.')],
             required: requiredKey.split('.')
