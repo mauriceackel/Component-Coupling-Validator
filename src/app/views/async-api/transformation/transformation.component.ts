@@ -323,24 +323,28 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
     this.showSpinner();
 
-    const direction = this.inputForm.get("publish").value
-      ? MappingDirection.OUTPUT
-      : MappingDirection.INPUT;
+    try {
+      const direction = this.inputForm.get("publish").value
+        ? MappingDirection.OUTPUT
+        : MappingDirection.INPUT;
 
-    const message = await this.mappingService.buildAsyncApiMappingPairs(
-      this.parseSource(),
-      this.parseTargets(),
-      direction
-    );
+      const message = await this.mappingService.buildAsyncApiMappingPairs(
+        this.parseSource(),
+        this.parseTargets(),
+        direction
+      );
 
-    this.mappingPairs.splice(0);
-    this.mappingPairs.push(...message);
+      this.mappingPairs.splice(0);
+      this.mappingPairs.push(...message);
 
-    this.mappingPairs.push(...(await this.getAllAttributeSuggestions()));
+      this.mappingPairs.push(...(await this.getAllAttributeSuggestions()));
 
-    this.automaticMappingPairs = this.mappingPairs.map(mp => deepcopy(mp));
-
-    this.stopSpinner();
+      this.automaticMappingPairs = this.mappingPairs.map(mp => deepcopy(mp));
+    } catch (err) {
+      console.log("Error ocurred while building mapping", err);
+    } finally {
+      this.stopSpinner();
+    }
   }
 
   private async getOperationSuggestions() {

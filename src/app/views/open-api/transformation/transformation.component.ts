@@ -253,20 +253,25 @@ export class TransformationComponent implements OnInit, OnDestroy {
 
     this.showSpinner();
 
-    const { request, response } = await this.mappingService.buildOpenApiMappingPairs(this.parseSource(), this.parseTargets());
+    try {
+      const { request, response } = await this.mappingService.buildOpenApiMappingPairs(this.parseSource(), this.parseTargets());
 
-    this.requestMappingPairs.splice(0);
-    this.requestMappingPairs.push(...request);
+      this.requestMappingPairs.splice(0);
+      this.requestMappingPairs.push(...request);
 
-    this.responseMappingPairs.splice(0);
-    this.responseMappingPairs.push(...response);
+      this.responseMappingPairs.splice(0);
+      this.responseMappingPairs.push(...response);
 
-    this.requestMappingPairs.push(...await this.getAllAttributeSuggestions(true));
-    this.responseMappingPairs.push(...await this.getAllAttributeSuggestions(false));
+      this.requestMappingPairs.push(...await this.getAllAttributeSuggestions(true));
+      this.responseMappingPairs.push(...await this.getAllAttributeSuggestions(false));
 
-    this.automaticRequestMappingPairs = this.requestMappingPairs.map(mp => deepcopy(mp));
-    this.automaticResponseMappingPairs = this.responseMappingPairs.map(mp => deepcopy(mp));
-    this.stopSpinner();
+      this.automaticRequestMappingPairs = this.requestMappingPairs.map(mp => deepcopy(mp));
+      this.automaticResponseMappingPairs = this.responseMappingPairs.map(mp => deepcopy(mp));
+    } catch (err) {
+      console.log("Error ocurred while building mapping", err);
+    } finally {
+      this.stopSpinner();
+    }
   }
 
   private async getOperationSuggestions() {
