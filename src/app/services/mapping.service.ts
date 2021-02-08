@@ -737,7 +737,7 @@ export class MappingService {
   private performResponseMapping(input: { [key: string]: string }, mapping: { [key: string]: string }, mappingInputKeys: { [key: string]: string[] }) {
     const inputKeys = Object.keys(input);
     const simpleRegex = new RegExp(inputKeys.join('|'), 'g');
-    const extendedInputKeys = inputKeys.map(k => `\\$$\\.${k.split('.').map(p => `"${p}"`).join('\\.')}`);
+    const extendedInputKeys = inputKeys.map(k => `\\$\\.${k.split('.').map(p => `"${p}"`).join('\\.')}`);
     const extendedRegex = new RegExp(extendedInputKeys.join('|'), 'g');
 
     const result: { [key: string]: string } = {};
@@ -749,11 +749,11 @@ export class MappingService {
         continue;
       }
 
-      result[key] = mapping[key].replace(simpleRegex, (match) => input[match]);
-      result[key] = result[key].replace(extendedRegex, (match) => {
+      result[key] = mapping[key].replace(extendedRegex, (match) => {
         const resultingKey = match.split('.').slice(1).map(v => v.slice(1, -1)).join('.')
         return input[resultingKey];
       });
+      result[key] = result[key].replace(simpleRegex, (match) => input[match]);
     }
 
     return result;
@@ -761,19 +761,19 @@ export class MappingService {
 
   private performRequestMapping(input: { [key: string]: string }, mapping: { [key: string]: string }) {
     const inputKeys = Object.keys(input);
-    const simpleRegex = new RegExp(inputKeys.join('|'), 'g');
-    const extendedInputKeys = inputKeys.map(k => `\\$$\\.${k.split('.').map(p => `"${p}"`).join('\\.')}`);
+    const simpleRegex = new RegExp(inputKeys.map(k => `^${k}$`).join('|'), 'g');
+    const extendedInputKeys = inputKeys.map(k => `\\$\\.${k.split('.').map(p => `"${p}"`).join('\\.')}`);
     const extendedRegex = new RegExp(extendedInputKeys.join('|'), 'g');
 
     const result: { [key: string]: string } = {};
 
     //For each entry in the mapping, try to replace a key from the input with a value from the input
     for (const key in mapping) {
-      result[key] = mapping[key].replace(simpleRegex, (match) => input[match]);
-      result[key] = result[key].replace(extendedRegex, (match) => {
+      result[key] = mapping[key].replace(extendedRegex, (match) => {
         const resultingKey = match.split('.').slice(1).map(v => v.slice(1, -1)).join('.')
         return input[resultingKey];
       });
+      result[key] = result[key].replace(simpleRegex, (match) => input[match]);
     }
 
     return result;
@@ -785,7 +785,7 @@ export class MappingService {
 
     for (let i = 0; i < targetIds.length; i++) {
       const inputKeys = Object.keys(input[targetIds[i]]);
-      const simpleRegex = new RegExp(inputKeys.join('|'), 'g');
+    const simpleRegex = new RegExp(inputKeys.map(k => `^${k}$`).join('|'), 'g');
       const extendedInputKeys = inputKeys.map(k => `\\$\\.${k.split('.').map(p => `"${p}"`).join('\\.')}`);
       const extendedRegex = new RegExp(extendedInputKeys.join('|'), 'g');
 
