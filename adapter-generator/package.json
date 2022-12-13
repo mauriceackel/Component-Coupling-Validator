@@ -14,7 +14,7 @@
     "@asyncapi/generator": "^1.0.0-rc.10",
     "adm-zip": "^0.4.16",
     "axios": "^0.18.1",
-    "express": "^4.16.1",
+    "express": "^4.17.3",
     "express-session": "^1.15.6",
     "firebase": "^7.15.5",
     "uuid": "^8.2.0",
